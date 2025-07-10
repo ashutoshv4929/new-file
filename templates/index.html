@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Welcome Section -->
+    <div class="welcome-card mb-4">
+        <div class="card-body">
+            <h2 class="welcome-title">Welcome back!</h2>
+            <p class="welcome-subtitle">Convert your files offline with ease</p>
+            
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-number">{{ stats.today }}</div>
+                    <div class="stat-label">Today</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ stats.total }}</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ stats.saved }}</div>
+                    <div class="stat-label">Saved</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversion Options -->
+    <div class="section-title">
+        <h3>Choose Conversion</h3>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="conversion-card" onclick="location.href='{{ url_for('upload_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon pdf-icon">
+                        <i data-feather="file-text"></i>
+                    </div>
+                    <h5 class="conversion-title">PDF Converter</h5>
+                    <p class="conversion-subtitle">To Word or Text</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="conversion-card" onclick="location.href='{{ url_for('upload_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon doc-icon">
+                        <i data-feather="file"></i>
+                    </div>
+                    <h5 class="conversion-title">Doc to PDF</h5>
+                    <p class="conversion-subtitle">Word & Text files</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="conversion-card" onclick="location.href='{{ url_for('upload_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon image-icon">
+                        <i data-feather="image"></i>
+                    </div>
+                    <h5 class="conversion-title">Image to PDF</h5>
+                    <p class="conversion-subtitle">Multi-page PDF</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="conversion-card" onclick="location.href='{{ url_for('extract_text_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon text-icon">
+                        <i data-feather="type"></i>
+                    </div>
+                    <h5 class="conversion-title">Extract Text</h5>
+                    <p class="conversion-subtitle">OCR from images</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section-title mt-4">
+        <h3>Quick Actions</h3>
+    </div>
+    
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="quick-action-card" onclick="location.href='{{ url_for('upload_page') }}'">
+                <div class="card-body text-center">
+                    <i data-feather="upload" class="mb-2"></i>
+                    <h6>Upload Files</h6>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="quick-action-card" onclick="location.href='{{ url_for('my_files') }}'">
+                <div class="card-body text-center">
+                    <i data-feather="folder" class="mb-2"></i>
+                    <h6>My Files</h6>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="quick-action-card" onclick="location.href='{{ url_for('history') }}'">
+                <div class="card-body text-center">
+                    <i data-feather="clock" class="mb-2"></i>
+                    <h6>History</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
