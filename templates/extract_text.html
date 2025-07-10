@@ -4,16 +4,29 @@
 
 {% block content %}
 <div class="container py-4">
+    <!-- Back to Home Button -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i data-feather="arrow-left" class="me-2"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+    
     <div class="row justify-content-center">
         <div class="col-md-10">
-            <div class="card extract-card">
-                <div class="card-header">
-                    <h4 class="mb-0">
-                        <i data-feather="type" class="me-2"></i>
-                        Extract Text with OCR
-                    </h4>
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="conversion-icon text-icon mb-3">
+                    <i data-feather="type"></i>
                 </div>
-                <div class="card-body">
+                <h2 class="mb-2">Extract Text</h2>
+                <p class="text-muted">OCR text extraction from PDF and image files</p>
+            </div>
+            
+            <div class="card extract-card">
+                <div class="card-body p-4">
                     {% if not extracted_text %}
                     <form method="POST" enctype="multipart/form-data" id="extractForm">
                         <div class="upload-area" id="uploadArea">

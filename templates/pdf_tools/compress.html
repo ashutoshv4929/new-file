@@ -4,16 +4,29 @@
 
 {% block content %}
 <div class="container py-4">
+    <!-- Back to Home Button -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i data-feather="arrow-left" class="me-2"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+    
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card upload-card">
-                <div class="card-header">
-                    <h4 class="mb-0">
-                        <i data-feather="minimize-2" class="me-2"></i>
-                        Compress PDF File
-                    </h4>
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="conversion-icon image-icon mb-3">
+                    <i data-feather="minimize-2"></i>
                 </div>
-                <div class="card-body">
+                <h2 class="mb-2">Compress PDF File</h2>
+                <p class="text-muted">Reduce PDF file size while maintaining quality</p>
+            </div>
+            
+            <div class="card upload-card">
+                <div class="card-body p-4">
                     <div class="alert alert-warning">
                         <i data-feather="info" class="me-2"></i>
                         PDF compression feature coming soon! This feature will reduce PDF file size while maintaining quality.
