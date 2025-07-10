@@ -441,55 +441,80 @@ body {
     outline: none;
 }
 
-/* Text Content Visibility Fixes */
-.card-body p, .card-body li, .card-body span {
-    color: var(--text-primary) !important;
+/* Text Content Visibility Fixes - Enhanced */
+.card-body, .card-body p, .card-body li, .card-body span, .card-body div {
+    color: #F8FAFC !important;
 }
 
-.card-body h6, .card-body h5 {
-    color: var(--text-primary) !important;
+.card-body h1, .card-body h2, .card-body h3, .card-body h4, .card-body h5, .card-body h6 {
+    color: #F8FAFC !important;
     font-weight: 600;
 }
 
-.card-body ul li {
-    color: var(--text-primary) !important;
-    margin-bottom: 0.25rem;
+.card-body ul, .card-body ol {
+    color: #F8FAFC !important;
 }
 
-.card-body ol li {
-    color: var(--text-primary) !important;
-    margin-bottom: 0.25rem;
+.card-body ul li, .card-body ol li {
+    color: #F8FAFC !important;
+    margin-bottom: 0.5rem;
 }
 
 .list-unstyled li {
-    color: var(--text-primary) !important;
+    color: #F8FAFC !important;
 }
 
+/* Alert text visibility */
+.alert p, .alert {
+    color: inherit !important;
+}
+
+.alert-info {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #60A5FA !important;
+    border-left: 4px solid #60A5FA;
+}
+
+.alert-warning {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #F59E0B !important;
+    border-left: 4px solid #F59E0B;
+}
+
+/* Text color classes override */
 .text-success {
-    color: var(--success-color) !important;
+    color: #10B981 !important;
 }
 
 .text-warning {
-    color: var(--warning-color) !important;
+    color: #F59E0B !important;
 }
 
 .text-info {
-    color: var(--info-color) !important;
+    color: #60A5FA !important;
 }
 
 .text-muted {
-    color: var(--text-secondary) !important;
+    color: #CBD5E1 !important;
 }
 
-/* Info Cards Content */
+.text-primary {
+    color: #F8FAFC !important;
+}
+
+.text-secondary {
+    color: #CBD5E1 !important;
+}
+
+/* Info Cards Content Enhanced */
 .card-body .row h6 {
-    color: var(--text-primary) !important;
+    color: #F8FAFC !important;
     font-weight: 600;
     margin-bottom: 0.75rem;
 }
 
 .card-body .row li {
-    color: var(--text-primary) !important;
+    color: #F8FAFC !important;
     display: flex;
     align-items: center;
     margin-bottom: 0.5rem;
@@ -499,14 +524,24 @@ body {
     margin-right: 0.5rem;
 }
 
-/* Feature Lists */
+/* Feature Lists Enhanced */
 .features-list {
-    color: var(--text-primary) !important;
+    color: #F8FAFC !important;
 }
 
 .features-list li {
-    color: var(--text-primary) !important;
+    color: #F8FAFC !important;
     padding: 0.25rem 0;
+}
+
+/* Ensure all text is visible in cards */
+.card p, .card ul, .card ol, .card li, .card span, .card div:not(.progress):not(.upload-area) {
+    color: #F8FAFC !important;
+}
+
+/* Override any Bootstrap text colors */
+.card .text-dark {
+    color: #F8FAFC !important;
 }
 
 /* File Cards */
