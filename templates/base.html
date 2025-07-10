@@ -36,15 +36,21 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('upload_page') }}">
+                            <i data-feather="upload-cloud" class="me-1"></i>
+                            Upload to Cloud
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('extract_text_page') }}">
                             <i data-feather="type" class="me-1"></i>
                             Extract Text
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('my_files') }}">
-                            <i data-feather="folder" class="me-1"></i>
-                            My Files
+                        <a class="nav-link" href="{{ url_for('convert_page') }}">
+                            <i data-feather="refresh-cw" class="me-1"></i>
+                            Convert Files
                         </a>
                     </li>
                 </ul>
@@ -81,21 +87,21 @@
                     </a>
                 </div>
                 <div class="col-3 text-center">
-                    <a href="{{ url_for('my_files') }}" class="nav-link text-white">
-                        <i data-feather="folder"></i>
-                        <small class="d-block">My Files</small>
+                    <a href="{{ url_for('upload_page') }}" class="nav-link text-white">
+                        <i data-feather="upload-cloud"></i>
+                        <small class="d-block">Upload</small>
                     </a>
                 </div>
                 <div class="col-3 text-center">
-                    <a href="{{ url_for('history') }}" class="nav-link text-white">
-                        <i data-feather="clock"></i>
-                        <small class="d-block">History</small>
+                    <a href="{{ url_for('extract_text_page') }}" class="nav-link text-white">
+                        <i data-feather="type"></i>
+                        <small class="d-block">Extract</small>
                     </a>
                 </div>
                 <div class="col-3 text-center">
-                    <a href="{{ url_for('settings') }}" class="nav-link text-white">
-                        <i data-feather="settings"></i>
-                        <small class="d-block">Settings</small>
+                    <a href="{{ url_for('convert_page') }}" class="nav-link text-white">
+                        <i data-feather="refresh-cw"></i>
+                        <small class="d-block">Convert</small>
                     </a>
                 </div>
             </div>

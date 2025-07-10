@@ -2,7 +2,12 @@
 
 ## Overview
 
-Smart File Converter is a web-based application built with Flask that provides file conversion and OCR (Optical Character Recognition) services. The application allows users to upload documents and images, convert them between different formats, and extract text using Google Cloud Vision API. It features a modern dark-themed interface and integrates with Google Cloud services for enhanced functionality.
+Smart File Converter is a simplified web-based application built with Flask that focuses on three core features:
+1. **Upload to Google Cloud Storage**: Upload PDF and image files directly to Google Cloud Storage
+2. **OCR Text Extraction**: Extract text from PDF and image files using Google Cloud Vision API  
+3. **File Conversion**: Convert documents between formats (PDF, DOC, DOCX, TXT) using LibreOffice
+
+The application features a modern dark-themed interface and integrates with Google Cloud services for cloud storage and OCR functionality.
 
 ## User Preferences
 
@@ -43,21 +48,32 @@ Preferred communication style: Simple, everyday language.
 2. **CloudStorageService**: Google Cloud Storage integration for file backup and retrieval
 
 ### Core Routes
-- `/` - Home dashboard with conversion statistics
-- `/upload` - File upload interface with drag-and-drop support
-- `/extract-text` - OCR text extraction interface
+- `/` - Home dashboard with three main features
+- `/upload` - Upload files to Google Cloud Storage
+- `/extract-text` - OCR text extraction using Google Cloud Vision API
+- `/convert` - File conversion using LibreOffice
 - `/my-files` - User file management
 - `/history` - Conversion history tracking
-- `/settings` - Application configuration
 
 ## Data Flow
 
-1. **File Upload**: Users upload files through drag-and-drop or file picker
-2. **Validation**: File type and size validation against allowed extensions
-3. **Processing**: Files are processed based on conversion type (PDF conversion, OCR extraction)
-4. **Storage**: Processed files stored locally, optionally backed up to Google Cloud Storage
-5. **Database Recording**: Conversion history and results stored in database
-6. **Result Delivery**: Users can download converted files or view extracted text
+### Upload to Cloud Storage
+1. **File Upload**: Users upload files through drag-and-drop interface
+2. **Local Save**: File temporarily saved locally
+3. **Cloud Upload**: File uploaded to Google Cloud Storage
+4. **Database Recording**: Upload history stored in database
+
+### OCR Text Extraction  
+1. **File Upload**: Users upload PDF or image files
+2. **Google Cloud Vision**: Text extracted using Cloud Vision API
+3. **Display Results**: Extracted text displayed on screen
+4. **Save Option**: Users can save extracted text as .txt file
+
+### File Conversion
+1. **File Upload**: Users upload document files
+2. **LibreOffice Processing**: Files converted using LibreOffice headless mode
+3. **Format Conversion**: Convert between PDF, DOCX, TXT, ODT formats
+4. **Download**: Converted file automatically downloaded
 
 ## External Dependencies
 
@@ -73,6 +89,10 @@ Preferred communication style: Simple, everyday language.
 - **pdf2image**: PDF to image conversion for OCR
 - **google-cloud-vision**: Google Cloud Vision API client
 - **google-cloud-storage**: Google Cloud Storage client
+
+### System Dependencies
+- **LibreOffice**: Document conversion engine (headless mode)
+- **unoconv**: Universal Office Converter for LibreOffice
 
 ### Frontend Libraries
 - **Bootstrap 5.3.0**: CSS framework via CDN
@@ -102,5 +122,13 @@ Preferred communication style: Simple, everyday language.
 - File type validation and size limits
 - Session management with configurable secrets
 - Proxy-aware deployment with ProxyFix middleware
+
+## Recent Changes
+
+**July 10, 2025**: Simplified application to focus on three core features:
+- Streamlined interface with three main options: Upload to Cloud, Extract Text, Convert Files
+- Added LibreOffice integration for real document conversion (PDF, DOCX, TXT, ODT)
+- Updated navigation and UI to focus on the three core features
+- Removed unnecessary settings and complexity
 
 The application is designed to be easily deployable on cloud platforms with minimal configuration, while providing robust file conversion and OCR capabilities through Google Cloud services integration.
