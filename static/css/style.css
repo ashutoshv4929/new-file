@@ -231,6 +231,31 @@ body {
     color: var(--text-primary);
 }
 
+/* Disabled upload area */
+.upload-area.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+/* Dropdown menus */
+.dropdown-menu {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.dropdown-item {
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: var(--primary-color);
+    color: white;
+}
+
 /* Upload Area */
 .upload-area {
     border: 2px dashed var(--border-color);

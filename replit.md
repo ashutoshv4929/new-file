@@ -2,12 +2,19 @@
 
 ## Overview
 
-Smart File Converter is a simplified web-based application built with Flask that focuses on three core features:
-1. **Upload to Google Cloud Storage**: Upload PDF and image files directly to Google Cloud Storage
-2. **OCR Text Extraction**: Extract text from PDF and image files using Google Cloud Vision API  
-3. **File Conversion**: Convert documents between formats (PDF, DOC, DOCX, TXT) using LibreOffice
+Smart File Converter is a PDF-focused web application built with Flask that provides comprehensive PDF tools and OCR functionality:
 
-The application features a modern dark-themed interface and integrates with Google Cloud services for cloud storage and OCR functionality.
+## PDF Tools (iLovePDF-style):
+1. **Merge PDF**: Combine multiple PDF files into one
+2. **Split PDF**: Split PDF into individual pages  
+3. **Compress PDF**: Reduce PDF file size (coming soon)
+4. **PDF to Images**: Convert PDF pages to PNG images
+5. **Images to PDF**: Create PDF from multiple images
+
+## OCR Feature:
+6. **Extract Text**: Extract text from PDF and image files using Google Cloud Vision API
+
+The application features a modern dark-themed interface similar to iLovePDF with comprehensive PDF manipulation tools.
 
 ## User Preferences
 
@@ -48,10 +55,13 @@ Preferred communication style: Simple, everyday language.
 2. **CloudStorageService**: Google Cloud Storage integration for file backup and retrieval
 
 ### Core Routes
-- `/` - Home dashboard with three main features
-- `/upload` - Upload files to Google Cloud Storage
+- `/` - Home dashboard with PDF tools
+- `/merge-pdf` - Merge multiple PDF files
+- `/split-pdf` - Split PDF into individual pages
+- `/compress-pdf` - Compress PDF files (coming soon)
+- `/pdf-to-images` - Convert PDF pages to images
+- `/images-to-pdf` - Create PDF from images
 - `/extract-text` - OCR text extraction using Google Cloud Vision API
-- `/convert` - File conversion using LibreOffice
 - `/my-files` - User file management
 - `/history` - Conversion history tracking
 
@@ -85,8 +95,9 @@ Preferred communication style: Simple, everyday language.
 ### Python Libraries
 - **Flask**: Web framework and extensions (SQLAlchemy, etc.)
 - **Werkzeug**: WSGI utilities and security
-- **Pillow**: Image processing
-- **pdf2image**: PDF to image conversion for OCR
+- **Pillow**: Image processing and PDF creation
+- **PyPDF2**: PDF manipulation (merge, split)
+- **pdf2image**: PDF to image conversion
 - **google-cloud-vision**: Google Cloud Vision API client
 - **google-cloud-storage**: Google Cloud Storage client
 
@@ -125,10 +136,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-**July 10, 2025**: Simplified application to focus on three core features:
-- Streamlined interface with three main options: Upload to Cloud, Extract Text, Convert Files
-- Added LibreOffice integration for real document conversion (PDF, DOCX, TXT, ODT)
-- Updated navigation and UI to focus on the three core features
-- Removed unnecessary settings and complexity
+**July 10, 2025**: Transformed into iLovePDF-style PDF tools application:
+- Added comprehensive PDF tools: Merge, Split, Compress, PDF↔Images conversion
+- Implemented PyPDF2 for PDF manipulation operations
+- Created dedicated pages for each PDF tool with intuitive interfaces
+- Maintained OCR text extraction functionality
+- Removed file conversion feature as requested
+- Updated navigation to focus on PDF tools and OCR
 
 The application is designed to be easily deployable on cloud platforms with minimal configuration, while providing robust file conversion and OCR capabilities through Google Cloud services integration.

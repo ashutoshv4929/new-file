@@ -35,22 +35,23 @@
                             Home
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('upload_page') }}">
-                            <i data-feather="upload-cloud" class="me-1"></i>
-                            Upload to Cloud
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="pdfToolsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i data-feather="file-text" class="me-1"></i>
+                            PDF Tools
                         </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('merge_pdf_page') }}">Merge PDF</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('split_pdf_page') }}">Split PDF</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('compress_pdf_page') }}">Compress PDF</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('pdf_to_images_page') }}">PDF to Images</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('images_to_pdf_page') }}">Images to PDF</a></li>
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('extract_text_page') }}">
                             <i data-feather="type" class="me-1"></i>
                             Extract Text
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('convert_page') }}">
-                            <i data-feather="refresh-cw" class="me-1"></i>
-                            Convert Files
                         </a>
                     </li>
                 </ul>
@@ -87,21 +88,21 @@
                     </a>
                 </div>
                 <div class="col-3 text-center">
-                    <a href="{{ url_for('upload_page') }}" class="nav-link text-white">
-                        <i data-feather="upload-cloud"></i>
-                        <small class="d-block">Upload</small>
+                    <a href="{{ url_for('merge_pdf_page') }}" class="nav-link text-white">
+                        <i data-feather="file-plus"></i>
+                        <small class="d-block">Merge</small>
+                    </a>
+                </div>
+                <div class="col-3 text-center">
+                    <a href="{{ url_for('split_pdf_page') }}" class="nav-link text-white">
+                        <i data-feather="scissors"></i>
+                        <small class="d-block">Split</small>
                     </a>
                 </div>
                 <div class="col-3 text-center">
                     <a href="{{ url_for('extract_text_page') }}" class="nav-link text-white">
                         <i data-feather="type"></i>
-                        <small class="d-block">Extract</small>
-                    </a>
-                </div>
-                <div class="col-3 text-center">
-                    <a href="{{ url_for('convert_page') }}" class="nav-link text-white">
-                        <i data-feather="refresh-cw"></i>
-                        <small class="d-block">Convert</small>
+                        <small class="d-block">OCR</small>
                     </a>
                 </div>
             </div>

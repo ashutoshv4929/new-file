@@ -239,112 +239,292 @@ def history():
     history_records = ConversionHistory.query.order_by(ConversionHistory.created_at.desc()).all()
     return render_template('history.html', history=history_records)
 
-@app.route('/convert')
-def convert_page():
-    """File conversion page"""
-    return render_template('convert.html')
+# PDF Tools Routes
 
-@app.route('/convert', methods=['POST'])
-def convert_file():
-    """Handle file conversion using LibreOffice"""
+@app.route('/merge-pdf')
+def merge_pdf_page():
+    """Merge PDF page"""
+    return render_template('pdf_tools/merge.html')
+
+@app.route('/split-pdf')
+def split_pdf_page():
+    """Split PDF page"""
+    return render_template('pdf_tools/split.html')
+
+@app.route('/compress-pdf')
+def compress_pdf_page():
+    """Compress PDF page"""
+    return render_template('pdf_tools/compress.html')
+
+@app.route('/pdf-to-images')
+def pdf_to_images_page():
+    """PDF to Images page"""
+    return render_template('pdf_tools/pdf_to_images.html')
+
+@app.route('/images-to-pdf')
+def images_to_pdf_page():
+    """Images to PDF page"""
+    return render_template('pdf_tools/images_to_pdf.html')
+
+@app.route('/merge-pdf', methods=['POST'])
+def merge_pdf():
+    """Handle PDF merging"""
+    from PyPDF2 import PdfMerger
+    
+    files = request.files.getlist('files')
+    if not files or len(files) < 2:
+        flash('Please select at least 2 PDF files to merge', 'error')
+        return redirect(request.url)
+    
+    try:
+        merger = PdfMerger()
+        temp_files = []
+        
+        # Save uploaded files temporarily
+        for file in files:
+            if file and file.filename.lower().endswith('.pdf'):
+                filename = str(uuid.uuid4()) + '_' + secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                merger.append(filepath)
+                temp_files.append(filepath)
+        
+        # Create merged PDF
+        merged_filename = f"merged_{uuid.uuid4().hex[:8]}.pdf"
+        merged_path = os.path.join(app.config['PROCESSED_FOLDER'], merged_filename)
+        
+        os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
+        merger.write(merged_path)
+        merger.close()
+        
+        # Clean up temp files
+        for temp_file in temp_files:
+            os.remove(temp_file)
+        
+        # Save to database
+        conversion = ConversionHistory(
+            filename=merged_filename,
+            original_filename='merged_pdf',
+            file_type='pdf',
+            conversion_type='merge_pdf',
+            file_size=os.path.getsize(merged_path),
+            status='completed',
+            processed_at=datetime.utcnow()
+        )
+        db.session.add(conversion)
+        db.session.commit()
+        
+        flash('PDFs merged successfully!', 'success')
+        return send_file(merged_path, as_attachment=True, download_name='merged.pdf')
+        
+    except Exception as e:
+        app.logger.error(f'PDF merge error: {str(e)}')
+        flash(f'Error merging PDFs: {str(e)}', 'error')
+        return redirect(request.url)
+
+@app.route('/split-pdf', methods=['POST'])
+def split_pdf():
+    """Handle PDF splitting"""
+    from PyPDF2 import PdfReader, PdfWriter
+    import zipfile
+    
     if 'file' not in request.files:
-        flash('No file selected', 'error')
+        flash('No PDF file selected', 'error')
         return redirect(request.url)
     
     file = request.files['file']
-    if file.filename == '':
-        flash('No file selected', 'error')
+    if not file or not file.filename.lower().endswith('.pdf'):
+        flash('Please select a PDF file', 'error')
         return redirect(request.url)
     
-    conversion_type = request.form.get('conversion_type', 'pdf')
-    
-    if file and allowed_file(file.filename):
-        # Generate unique filename
+    try:
+        # Save uploaded file
         filename = str(uuid.uuid4()) + '_' + secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
         
-        try:
-            # Ensure directories exist
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-            os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
-            file.save(filepath)
-            
-            # Convert file using LibreOffice
-            output_filename = convert_with_libreoffice(filepath, conversion_type)
-            
-            if output_filename:
-                # Save to database
-                conversion = ConversionHistory(
-                    filename=output_filename,
-                    original_filename=file.filename,
-                    file_type=file.filename.rsplit('.', 1)[1].lower(),
-                    conversion_type=f'convert_to_{conversion_type}',
-                    file_size=os.path.getsize(os.path.join(app.config['PROCESSED_FOLDER'], output_filename)),
-                    status='completed',
-                    processed_at=datetime.utcnow()
-                )
-                db.session.add(conversion)
-                db.session.commit()
-                
-                flash(f'File converted to {conversion_type.upper()} successfully!', 'success')
-                
-                # Return converted file
-                return send_file(
-                    os.path.join(app.config['PROCESSED_FOLDER'], output_filename),
-                    as_attachment=True,
-                    download_name=f"{file.filename.rsplit('.', 1)[0]}.{conversion_type}"
-                )
-            else:
-                flash('Error converting file', 'error')
-                return redirect(request.url)
-                
-        except Exception as e:
-            app.logger.error(f'File conversion error: {str(e)}')
-            flash(f'Error converting file: {str(e)}', 'error')
-            return redirect(request.url)
-    
-    flash('Invalid file type. Please upload PDF, DOC, DOCX, or TXT files.', 'error')
-    return redirect(request.url)
-
-def convert_with_libreoffice(input_file, output_format):
-    """Convert file using LibreOffice"""
-    try:
-        output_dir = app.config['PROCESSED_FOLDER']
+        # Split PDF
+        reader = PdfReader(filepath)
+        output_dir = os.path.join(app.config['PROCESSED_FOLDER'], f"split_{uuid.uuid4().hex[:8]}")
+        os.makedirs(output_dir, exist_ok=True)
         
-        # LibreOffice command
-        cmd = [
-            'libreoffice',
-            '--headless',
-            '--convert-to', output_format,
-            '--outdir', output_dir,
-            input_file
-        ]
-        
-        # Run conversion
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        
-        if result.returncode == 0:
-            # Generate output filename
-            base_name = os.path.basename(input_file).rsplit('.', 1)[0]
-            output_filename = f"{base_name}.{output_format}"
+        page_files = []
+        for page_num in range(len(reader.pages)):
+            writer = PdfWriter()
+            writer.add_page(reader.pages[page_num])
             
-            # Check if file was created
-            output_path = os.path.join(output_dir, output_filename)
-            if os.path.exists(output_path):
-                return output_filename
-            else:
-                app.logger.error(f'Output file not found: {output_path}')
-                return None
-        else:
-            app.logger.error(f'LibreOffice conversion failed: {result.stderr}')
-            return None
+            page_filename = f"page_{page_num + 1}.pdf"
+            page_path = os.path.join(output_dir, page_filename)
             
-    except subprocess.TimeoutExpired:
-        app.logger.error('LibreOffice conversion timed out')
-        return None
+            with open(page_path, 'wb') as output_file:
+                writer.write(output_file)
+            page_files.append(page_path)
+        
+        # Create zip file
+        zip_filename = f"split_pages_{uuid.uuid4().hex[:8]}.zip"
+        zip_path = os.path.join(app.config['PROCESSED_FOLDER'], zip_filename)
+        
+        with zipfile.ZipFile(zip_path, 'w') as zip_file:
+            for page_file in page_files:
+                zip_file.write(page_file, os.path.basename(page_file))
+        
+        # Clean up
+        os.remove(filepath)
+        for page_file in page_files:
+            os.remove(page_file)
+        os.rmdir(output_dir)
+        
+        # Save to database
+        conversion = ConversionHistory(
+            filename=zip_filename,
+            original_filename=file.filename,
+            file_type='pdf',
+            conversion_type='split_pdf',
+            file_size=os.path.getsize(zip_path),
+            status='completed',
+            processed_at=datetime.utcnow()
+        )
+        db.session.add(conversion)
+        db.session.commit()
+        
+        flash('PDF split successfully!', 'success')
+        return send_file(zip_path, as_attachment=True, download_name='split_pages.zip')
+        
     except Exception as e:
-        app.logger.error(f'LibreOffice conversion error: {str(e)}')
-        return None
+        app.logger.error(f'PDF split error: {str(e)}')
+        flash(f'Error splitting PDF: {str(e)}', 'error')
+        return redirect(request.url)
+
+@app.route('/pdf-to-images', methods=['POST'])
+def pdf_to_images():
+    """Convert PDF pages to images"""
+    import pdf2image
+    import zipfile
+    
+    if 'file' not in request.files:
+        flash('No PDF file selected', 'error')
+        return redirect(request.url)
+    
+    file = request.files['file']
+    if not file or not file.filename.lower().endswith('.pdf'):
+        flash('Please select a PDF file', 'error')
+        return redirect(request.url)
+    
+    try:
+        # Save uploaded file
+        filename = str(uuid.uuid4()) + '_' + secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Convert PDF to images
+        images = pdf2image.convert_from_path(filepath)
+        output_dir = os.path.join(app.config['PROCESSED_FOLDER'], f"images_{uuid.uuid4().hex[:8]}")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        image_files = []
+        for i, image in enumerate(images):
+            image_filename = f"page_{i + 1}.png"
+            image_path = os.path.join(output_dir, image_filename)
+            image.save(image_path, 'PNG')
+            image_files.append(image_path)
+        
+        # Create zip file
+        zip_filename = f"pdf_images_{uuid.uuid4().hex[:8]}.zip"
+        zip_path = os.path.join(app.config['PROCESSED_FOLDER'], zip_filename)
+        
+        with zipfile.ZipFile(zip_path, 'w') as zip_file:
+            for image_file in image_files:
+                zip_file.write(image_file, os.path.basename(image_file))
+        
+        # Clean up
+        os.remove(filepath)
+        for image_file in image_files:
+            os.remove(image_file)
+        os.rmdir(output_dir)
+        
+        # Save to database
+        conversion = ConversionHistory(
+            filename=zip_filename,
+            original_filename=file.filename,
+            file_type='pdf',
+            conversion_type='pdf_to_images',
+            file_size=os.path.getsize(zip_path),
+            status='completed',
+            processed_at=datetime.utcnow()
+        )
+        db.session.add(conversion)
+        db.session.commit()
+        
+        flash('PDF converted to images successfully!', 'success')
+        return send_file(zip_path, as_attachment=True, download_name='pdf_images.zip')
+        
+    except Exception as e:
+        app.logger.error(f'PDF to images error: {str(e)}')
+        flash(f'Error converting PDF to images: {str(e)}', 'error')
+        return redirect(request.url)
+
+@app.route('/images-to-pdf', methods=['POST'])
+def images_to_pdf():
+    """Convert images to PDF"""
+    from PIL import Image
+    
+    files = request.files.getlist('files')
+    if not files:
+        flash('Please select image files', 'error')
+        return redirect(request.url)
+    
+    try:
+        images = []
+        temp_files = []
+        
+        for file in files:
+            if file and file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                filename = str(uuid.uuid4()) + '_' + secure_filename(file.filename)
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(filepath)
+                
+                # Open and convert image
+                image = Image.open(filepath)
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')
+                images.append(image)
+                temp_files.append(filepath)
+        
+        if not images:
+            flash('No valid image files found', 'error')
+            return redirect(request.url)
+        
+        # Create PDF
+        pdf_filename = f"images_to_pdf_{uuid.uuid4().hex[:8]}.pdf"
+        pdf_path = os.path.join(app.config['PROCESSED_FOLDER'], pdf_filename)
+        
+        os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
+        images[0].save(pdf_path, save_all=True, append_images=images[1:])
+        
+        # Clean up temp files
+        for temp_file in temp_files:
+            os.remove(temp_file)
+        
+        # Save to database
+        conversion = ConversionHistory(
+            filename=pdf_filename,
+            original_filename='images_to_pdf',
+            file_type='pdf',
+            conversion_type='images_to_pdf',
+            file_size=os.path.getsize(pdf_path),
+            status='completed',
+            processed_at=datetime.utcnow()
+        )
+        db.session.add(conversion)
+        db.session.commit()
+        
+        flash('Images converted to PDF successfully!', 'success')
+        return send_file(pdf_path, as_attachment=True, download_name='images.pdf')
+        
+    except Exception as e:
+        app.logger.error(f'Images to PDF error: {str(e)}')
+        flash(f'Error converting images to PDF: {str(e)}', 'error')
+        return redirect(request.url)
 
 @app.route('/settings')
 def settings():
