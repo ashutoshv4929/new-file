@@ -7,13 +7,13 @@
     --background-color: #0F172A;
     --surface-color: #1E293B;
     --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --text-muted: #64748B;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
     --border-color: #334155;
     --success-color: #10B981;
     --warning-color: #F59E0B;
     --danger-color: #EF4444;
-    --info-color: #3B82F6;
+    --info-color: #60A5FA;
 }
 
 /* Base Styles */
@@ -439,6 +439,74 @@ body {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     outline: none;
+}
+
+/* Text Content Visibility Fixes */
+.card-body p, .card-body li, .card-body span {
+    color: var(--text-primary) !important;
+}
+
+.card-body h6, .card-body h5 {
+    color: var(--text-primary) !important;
+    font-weight: 600;
+}
+
+.card-body ul li {
+    color: var(--text-primary) !important;
+    margin-bottom: 0.25rem;
+}
+
+.card-body ol li {
+    color: var(--text-primary) !important;
+    margin-bottom: 0.25rem;
+}
+
+.list-unstyled li {
+    color: var(--text-primary) !important;
+}
+
+.text-success {
+    color: var(--success-color) !important;
+}
+
+.text-warning {
+    color: var(--warning-color) !important;
+}
+
+.text-info {
+    color: var(--info-color) !important;
+}
+
+.text-muted {
+    color: var(--text-secondary) !important;
+}
+
+/* Info Cards Content */
+.card-body .row h6 {
+    color: var(--text-primary) !important;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.card-body .row li {
+    color: var(--text-primary) !important;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.card-body .row li i {
+    margin-right: 0.5rem;
+}
+
+/* Feature Lists */
+.features-list {
+    color: var(--text-primary) !important;
+}
+
+.features-list li {
+    color: var(--text-primary) !important;
+    padding: 0.25rem 0;
 }
 
 /* File Cards */
