@@ -2,7 +2,7 @@ modules = ["python-3.11"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["freetype", "lcms2", "libimagequant", "libjpeg", "libreoffice", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "poppler_utils", "postgresql", "tcl", "tk", "unoconv", "zlib"]
+packages = ["freetype", "lcms2", "libimagequant", "libjpeg", "libreoffice", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "poppler_utils", "postgresql", "tcl", "tk", "unoconv", "zlib", "zip"]
 
 [deployment]
 deploymentTarget = "autoscale"

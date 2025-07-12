@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Merge PDF - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Back to Home Button -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i data-feather="arrow-left" class="me-2"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="conversion-icon pdf-icon mb-3">
+                    <i data-feather="file-plus"></i>
+                </div>
+                <h2 class="mb-2">Merge PDF Files</h2>
+                <p class="text-muted">Combine multiple PDF files into one document</p>
+            </div>
+            
+            <div class="card upload-card">
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" id="mergeForm">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-content">
+                                <i data-feather="file-plus" class="upload-icon"></i>
+                                <h5>Select Multiple PDF Files</h5>
+                                <p>Choose 2 or more PDF files to merge</p>
+                                <input type="file" class="form-control" name="files" id="fileInput" accept=".pdf" multiple required>
+                            </div>
+                        </div>
+                        
+                        <div class="file-info mt-3" id="fileInfo" style="display: none;">
+                            <div class="selected-files" id="selectedFiles">
+                                <!-- Selected files will appear here -->
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="mergeBtn">
+                                <i data-feather="file-plus" class="me-2"></i>
+                                Merge PDFs
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="merge-progress mt-3" id="mergeProgress" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted">Merging PDFs...</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Merge Info -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="info" class="me-2"></i>
+                        How to Merge PDFs
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Click on the upload area or drag PDF files</li>
+                        <li>Select 2 or more PDF files you want to merge</li>
+                        <li>Files will be merged in the order selected</li>
+                        <li>Click "Merge PDFs" to combine them</li>
+                        <li>Download your merged PDF file</li>
+                    </ol>
+                    <div class="alert alert-info mt-3">
+                        <i data-feather="info" class="me-2"></i>
+                        Only PDF files are supported. Maximum file size: 16MB per file
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const selectedFiles = document.getElementById('selectedFiles');
+    const mergeForm = document.getElementById('mergeForm');
+    const mergeBtn = document.getElementById('mergeBtn');
+    const mergeProgress = document.getElementById('mergeProgress');
+
+    // Click to upload
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    // File selection
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            displaySelectedFiles(e.target.files);
+        }
+    });
+
+    function displaySelectedFiles(files) {
+        selectedFiles.innerHTML = '';
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'selected-file mb-2';
+            fileDiv.innerHTML = `
+                <i data-feather="file-text" class="me-2 text-danger"></i>
+                <span>${file.name}</span>
+                <small class="text-muted ms-2">${formatFileSize(file.size)}</small>
+            `;
+            selectedFiles.appendChild(fileDiv);
+        }
+        feather.replace();
+        fileInfo.style.display = 'block';
+        uploadArea.classList.add('file-selected');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Form submission
+    mergeForm.addEventListener('submit', function(e) {
+        if (fileInput.files.length < 2) {
+            e.preventDefault();
+            alert('Please select at least 2 PDF files to merge');
+            return;
+        }
+        
+        mergeBtn.disabled = true;
+        mergeProgress.style.display = 'block';
+        
+        // Simulate progress
+        let progress = 0;
+        const progressBar = mergeProgress.querySelector('.progress-bar');
+        const interval = setInterval(function() {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 300);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            clearInterval(interval);
+        });
+    });
+});
+</script>
+{% endblock %}

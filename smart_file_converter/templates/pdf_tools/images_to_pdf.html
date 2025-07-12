@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Images to PDF - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Back to Home Button -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i data-feather="arrow-left" class="me-2"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="conversion-icon pdf-icon mb-3">
+                    <i data-feather="file-text"></i>
+                </div>
+                <h2 class="mb-2">Images to PDF</h2>
+                <p class="text-muted">Create PDF from multiple images</p>
+            </div>
+            
+            <div class="card upload-card">
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" id="convertForm">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-content">
+                                <i data-feather="file-text" class="upload-icon"></i>
+                                <h5>Select Images to Convert</h5>
+                                <p>Choose multiple images to create a PDF</p>
+                                <input type="file" class="form-control" name="files" id="fileInput" accept=".png,.jpg,.jpeg" multiple required>
+                            </div>
+                        </div>
+                        
+                        <div class="file-info mt-3" id="fileInfo" style="display: none;">
+                            <div class="selected-files" id="selectedFiles">
+                                <!-- Selected files will appear here -->
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="convertBtn">
+                                <i data-feather="file-text" class="me-2"></i>
+                                Create PDF
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="convert-progress mt-3" id="convertProgress" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted">Creating PDF...</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conversion Info -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="info" class="me-2"></i>
+                        Images to PDF Conversion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Supported Formats</h6>
+                            <ul class="list-unstyled">
+                                <li><i data-feather="image" class="me-2 text-success"></i>PNG</li>
+                                <li><i data-feather="image" class="me-2 text-warning"></i>JPG, JPEG</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>How it works</h6>
+                            <ol>
+                                <li>Select multiple image files</li>
+                                <li>Images are arranged in order</li>
+                                <li>Each image becomes a PDF page</li>
+                                <li>Download the combined PDF</li>
+                            </ol>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i data-feather="info" class="me-2"></i>
+                        Maximum file size: 16MB per image. Images will maintain their aspect ratio.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const selectedFiles = document.getElementById('selectedFiles');
+    const convertForm = document.getElementById('convertForm');
+    const convertBtn = document.getElementById('convertBtn');
+    const convertProgress = document.getElementById('convertProgress');
+
+    // Click to upload
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    // File selection
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            displaySelectedFiles(e.target.files);
+        }
+    });
+
+    function displaySelectedFiles(files) {
+        selectedFiles.innerHTML = '';
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const fileDiv = document.createElement('div');
+            fileDiv.className = 'selected-file mb-2';
+            fileDiv.innerHTML = `
+                <i data-feather="image" class="me-2 text-success"></i>
+                <span>${file.name}</span>
+                <small class="text-muted ms-2">${formatFileSize(file.size)}</small>
+            `;
+            selectedFiles.appendChild(fileDiv);
+        }
+        feather.replace();
+        fileInfo.style.display = 'block';
+        uploadArea.classList.add('file-selected');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Form submission
+    convertForm.addEventListener('submit', function(e) {
+        if (fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('Please select at least one image file');
+            return;
+        }
+        
+        convertBtn.disabled = true;
+        convertProgress.style.display = 'block';
+        
+        // Simulate progress
+        let progress = 0;
+        const progressBar = convertProgress.querySelector('.progress-bar');
+        const interval = setInterval(function() {
+            progress += Math.random() * 12;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 400);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            clearInterval(interval);
+        });
+    });
+});
+</script>
+{% endblock %}

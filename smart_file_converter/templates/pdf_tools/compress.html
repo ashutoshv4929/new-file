@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Compress PDF - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Back to Home Button -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i data-feather="arrow-left" class="me-2"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="conversion-icon image-icon mb-3">
+                    <i data-feather="minimize-2"></i>
+                </div>
+                <h2 class="mb-2">Compress PDF File</h2>
+                <p class="text-muted">Reduce PDF file size while maintaining quality</p>
+            </div>
+            
+            <div class="card upload-card">
+                <div class="card-body p-4">
+                    <div class="alert alert-warning">
+                        <i data-feather="info" class="me-2"></i>
+                        PDF compression feature coming soon! This feature will reduce PDF file size while maintaining quality.
+                    </div>
+                    
+                    <div class="upload-area disabled">
+                        <div class="upload-content">
+                            <i data-feather="minimize-2" class="upload-icon"></i>
+                            <h5>PDF Compression (Coming Soon)</h5>
+                            <p>Reduce PDF file size while maintaining quality</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compression Info -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="info" class="me-2"></i>
+                        About PDF Compression
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>PDF compression reduces file size by:</p>
+                    <ul>
+                        <li>Optimizing images and graphics</li>
+                        <li>Removing unnecessary metadata</li>
+                        <li>Compressing text and fonts</li>
+                        <li>Eliminating duplicate resources</li>
+                    </ul>
+                    <div class="alert alert-info mt-3">
+                        <i data-feather="zap" class="me-2"></i>
+                        This feature will be available in the next update
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

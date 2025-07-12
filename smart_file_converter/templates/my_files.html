@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}My Files - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>
+            <i data-feather="folder" class="me-2"></i>
+            My Files
+        </h3>
+        <a href="{{ url_for('upload_page') }}" class="btn btn-primary">
+            <i data-feather="plus" class="me-2"></i>
+            Upload New
+        </a>
+    </div>
+
+    {% if files %}
+    <div class="row">
+        {% for file in files %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card file-card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="file-icon me-3">
+                            {% if file.file_type == 'pdf' %}
+                                <i data-feather="file-text" class="text-danger"></i>
+                            {% elif file.file_type in ['doc', 'docx'] %}
+                                <i data-feather="file" class="text-primary"></i>
+                            {% elif file.file_type == 'txt' %}
+                                <i data-feather="file-text" class="text-secondary"></i>
+                            {% elif file.file_type in ['png', 'jpg', 'jpeg', 'gif'] %}
+                                <i data-feather="image" class="text-success"></i>
+                            {% else %}
+                                <i data-feather="file" class="text-muted"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">{{ file.original_filename }}</h6>
+                            <small class="text-muted">
+                                {{ file.file_type.upper() }} • 
+                                {% if file.file_size %}
+                                    {{ (file.file_size / 1024) | round(1) }} KB
+                                {% else %}
+                                    Unknown size
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="file-meta">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-{{ 'success' if file.status == 'completed' else 'warning' if file.status == 'pending' else 'danger' }}">
+                                {{ file.status.title() }}
+                            </span>
+                            <small class="text-muted">
+                                {{ file.created_at.strftime('%b %d, %Y') }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="file-actions mt-3">
+                        <div class="btn-group w-100" role="group">
+                            {% if file.conversion_type == 'ocr_extraction' %}
+                                <a href="{{ url_for('extract_text_page') }}" class="btn btn-sm btn-outline-primary">
+                                    <i data-feather="eye" class="me-1"></i>
+                                    View Text
+                                </a>
+                            {% endif %}
+                            <button class="btn btn-sm btn-outline-secondary" onclick="downloadFile('{{ file.filename }}')">
+                                <i data-feather="download" class="me-1"></i>
+                                Download
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="text-center py-5">
+            <i data-feather="folder" class="empty-icon"></i>
+            <h4>No files yet</h4>
+            <p class="text-muted">Upload your first file to get started</p>
+            <a href="{{ url_for('upload_page') }}" class="btn btn-primary">
+                <i data-feather="upload" class="me-2"></i>
+                Upload Files
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function downloadFile(filename) {
+    // This would typically point to a download endpoint
+    // For now, we'll show a message
+    alert('Download functionality would be implemented here for: ' + filename);
+}
+</script>
+{% endblock %}

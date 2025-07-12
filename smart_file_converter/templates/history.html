@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}History - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>
+            <i data-feather="clock" class="me-2"></i>
+            Conversion History
+        </h3>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterHistory('all')">All</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterHistory('completed')">Completed</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterHistory('failed')">Failed</button>
+        </div>
+    </div>
+
+    {% if history %}
+    <div class="timeline">
+        {% for item in history %}
+        <div class="timeline-item" data-status="{{ item.status }}">
+            <div class="timeline-marker">
+                {% if item.status == 'completed' %}
+                    <i data-feather="check-circle" class="text-success"></i>
+                {% elif item.status == 'failed' %}
+                    <i data-feather="x-circle" class="text-danger"></i>
+                {% else %}
+                    <i data-feather="clock" class="text-warning"></i>
+                {% endif %}
+            </div>
+            <div class="timeline-content">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">{{ item.original_filename }}</h6>
+                            <small class="text-muted">{{ item.created_at.strftime('%b %d, %Y at %I:%M %p') }}</small>
+                        </div>
+                        
+                        <div class="conversion-info">
+                            <span class="badge bg-secondary me-2">{{ item.conversion_type.replace('_', ' ').title() }}</span>
+                            <span class="badge bg-{{ 'success' if item.status == 'completed' else 'warning' if item.status == 'pending' else 'danger' }}">
+                                {{ item.status.title() }}
+                            </span>
+                        </div>
+                        
+                        <div class="file-details mt-2">
+                            <small class="text-muted">
+                                <i data-feather="file" class="me-1"></i>
+                                {{ item.file_type.upper() }} • 
+                                {% if item.file_size %}
+                                    {{ (item.file_size / 1024) | round(1) }} KB
+                                {% else %}
+                                    Unknown size
+                                {% endif %}
+                            </small>
+                        </div>
+                        
+                        {% if item.error_message %}
+                        <div class="alert alert-danger mt-2 mb-0">
+                            <small>{{ item.error_message }}</small>
+                        </div>
+                        {% endif %}
+                        
+                        {% if item.status == 'completed' %}
+                        <div class="actions mt-3">
+                            <button class="btn btn-sm btn-outline-primary" onclick="downloadFile('{{ item.filename }}')">
+                                <i data-feather="download" class="me-1"></i>
+                                Download
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="text-center py-5">
+            <i data-feather="clock" class="empty-icon"></i>
+            <h4>No conversion history</h4>
+            <p class="text-muted">Your conversion history will appear here</p>
+            <a href="{{ url_for('upload_page') }}" class="btn btn-primary">
+                <i data-feather="upload" class="me-2"></i>
+                Start Converting
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterHistory(status) {
+    const items = document.querySelectorAll('.timeline-item');
+    const buttons = document.querySelectorAll('.btn-group button');
+    
+    // Update active button
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Filter items
+    items.forEach(item => {
+        if (status === 'all' || item.dataset.status === status) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function downloadFile(filename) {
+    // This would typically point to a download endpoint
+    alert('Download functionality would be implemented here for: ' + filename);
+}
+
+// Set default filter
+document.addEventListener('DOMContentLoaded', function() {
+    const allBtn = document.querySelector('.btn-group button[onclick="filterHistory(\'all\')"]');
+    if (allBtn) {
+        allBtn.classList.add('active');
+    }
+});
+</script>
+{% endblock %}

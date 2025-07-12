@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Split PDF - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Back to Home Button -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i data-feather="arrow-left" class="me-2"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="conversion-icon doc-icon mb-3">
+                    <i data-feather="scissors"></i>
+                </div>
+                <h2 class="mb-2">Split PDF File</h2>
+                <p class="text-muted">Split PDF into individual pages</p>
+            </div>
+            
+            <div class="card upload-card">
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" id="splitForm">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-content">
+                                <i data-feather="scissors" class="upload-icon"></i>
+                                <h5>Select PDF File to Split</h5>
+                                <p>Upload a PDF file to split into individual pages</p>
+                                <input type="file" class="form-control" name="file" id="fileInput" accept=".pdf" required>
+                            </div>
+                        </div>
+                        
+                        <div class="file-info mt-3" id="fileInfo" style="display: none;">
+                            <div class="selected-file">
+                                <i data-feather="file-text" class="me-2"></i>
+                                <span id="fileName"></span>
+                                <small class="text-muted ms-2" id="fileSize"></small>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="splitBtn">
+                                <i data-feather="scissors" class="me-2"></i>
+                                Split PDF
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="split-progress mt-3" id="splitProgress" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted">Splitting PDF...</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Split Info -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="info" class="me-2"></i>
+                        How to Split PDF
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ol>
+                        <li>Upload a PDF file you want to split</li>
+                        <li>The PDF will be split into individual pages</li>
+                        <li>Each page will be saved as a separate PDF file</li>
+                        <li>All pages will be packaged in a ZIP file</li>
+                        <li>Download the ZIP file containing all pages</li>
+                    </ol>
+                    <div class="alert alert-info mt-3">
+                        <i data-feather="info" class="me-2"></i>
+                        Only PDF files are supported. Maximum file size: 16MB
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const splitForm = document.getElementById('splitForm');
+    const splitBtn = document.getElementById('splitBtn');
+    const splitProgress = document.getElementById('splitProgress');
+
+    // Click to upload
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    // File selection
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        uploadArea.classList.add('file-selected');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Form submission
+    splitForm.addEventListener('submit', function(e) {
+        splitBtn.disabled = true;
+        splitProgress.style.display = 'block';
+        
+        // Simulate progress
+        let progress = 0;
+        const progressBar = splitProgress.querySelector('.progress-bar');
+        const interval = setInterval(function() {
+            progress += Math.random() * 10;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 400);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            clearInterval(interval);
+        });
+    });
+});
+</script>
+{% endblock %}

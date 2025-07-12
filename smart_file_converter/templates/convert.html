@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Convert Files - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card upload-card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i data-feather="refresh-cw" class="me-2"></i>
+                        Convert Files
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" id="convertForm">
+                        <div class="mb-3">
+                            <label class="form-label">Conversion Type</label>
+                            <select class="form-select" name="conversion_type" id="conversionType">
+                                <option value="pdf">Convert to PDF</option>
+                                <option value="docx">Convert to DOCX</option>
+                                <option value="txt">Convert to TXT</option>
+                                <option value="odt">Convert to ODT</option>
+                            </select>
+                        </div>
+                        
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-content">
+                                <i data-feather="file" class="upload-icon"></i>
+                                <h5>Select File to Convert</h5>
+                                <p>Upload DOC, DOCX, TXT, or PDF files</p>
+                                <input type="file" class="form-control" name="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.odt" required>
+                            </div>
+                        </div>
+                        
+                        <div class="file-info mt-3" id="fileInfo" style="display: none;">
+                            <div class="selected-file">
+                                <i data-feather="file" class="me-2"></i>
+                                <span id="fileName"></span>
+                                <small class="text-muted ms-2" id="fileSize"></small>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="convertBtn">
+                                <i data-feather="refresh-cw" class="me-2"></i>
+                                Convert File
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="convert-progress mt-3" id="convertProgress" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted">Converting file...</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conversion Info -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="info" class="me-2"></i>
+                        Conversion Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Supported Input Formats</h6>
+                            <ul class="list-unstyled">
+                                <li><i data-feather="file-text" class="me-2 text-danger"></i>PDF</li>
+                                <li><i data-feather="file" class="me-2 text-primary"></i>DOC, DOCX</li>
+                                <li><i data-feather="file-text" class="me-2 text-secondary"></i>TXT</li>
+                                <li><i data-feather="file" class="me-2 text-success"></i>ODT</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Output Formats</h6>
+                            <ul class="list-unstyled">
+                                <li><i data-feather="file-text" class="me-2 text-danger"></i>PDF - Portable Document Format</li>
+                                <li><i data-feather="file" class="me-2 text-primary"></i>DOCX - Microsoft Word</li>
+                                <li><i data-feather="file-text" class="me-2 text-secondary"></i>TXT - Plain Text</li>
+                                <li><i data-feather="file" class="me-2 text-success"></i>ODT - OpenDocument Text</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i data-feather="zap" class="me-2"></i>
+                        Powered by LibreOffice for high-quality document conversion
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const convertForm = document.getElementById('convertForm');
+    const convertBtn = document.getElementById('convertBtn');
+    const convertProgress = document.getElementById('convertProgress');
+
+    // Click to upload
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    // Drag and drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+
+    // File selection
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        uploadArea.classList.add('file-selected');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Form submission
+    convertForm.addEventListener('submit', function(e) {
+        convertBtn.disabled = true;
+        convertProgress.style.display = 'block';
+        
+        // Simulate progress
+        let progress = 0;
+        const progressBar = convertProgress.querySelector('.progress-bar');
+        const interval = setInterval(function() {
+            progress += Math.random() * 10;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 500);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            clearInterval(interval);
+        });
+    });
+});
+</script>
+{% endblock %}

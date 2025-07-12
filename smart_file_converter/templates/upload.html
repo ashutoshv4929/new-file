@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Files - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card upload-card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i data-feather="upload-cloud" class="me-2"></i>
+                        Upload to Google Cloud Storage
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-content">
+                                <i data-feather="cloud-upload" class="upload-icon"></i>
+                                <h5>Upload to Google Cloud</h5>
+                                <p>Files will be stored in Google Cloud Storage</p>
+                                <input type="file" class="form-control" name="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif" required>
+                            </div>
+                        </div>
+                        
+                        <div class="file-info mt-3" id="fileInfo" style="display: none;">
+                            <div class="selected-file">
+                                <i data-feather="file" class="me-2"></i>
+                                <span id="fileName"></span>
+                                <small class="text-muted ms-2" id="fileSize"></small>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="uploadBtn">
+                                <i data-feather="cloud-upload" class="me-2"></i>
+                                Upload to Cloud
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="upload-progress mt-3" id="uploadProgress" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted">Uploading...</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Supported Formats -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="info" class="me-2"></i>
+                        Supported Formats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Documents</h6>
+                            <ul class="list-unstyled">
+                                <li><i data-feather="file-text" class="me-2 text-danger"></i>PDF</li>
+                                <li><i data-feather="file" class="me-2 text-primary"></i>DOC, DOCX</li>
+                                <li><i data-feather="file-text" class="me-2 text-secondary"></i>TXT</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Images</h6>
+                            <ul class="list-unstyled">
+                                <li><i data-feather="image" class="me-2 text-success"></i>PNG, JPG, JPEG</li>
+                                <li><i data-feather="image" class="me-2 text-warning"></i>GIF</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i data-feather="cloud" class="me-2"></i>
+                        Files will be uploaded to Google Cloud Storage. Maximum file size: 16MB
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const uploadForm = document.getElementById('uploadForm');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadProgress = document.getElementById('uploadProgress');
+
+    // Click to upload
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    // Drag and drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+
+    // File selection
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        uploadArea.classList.add('file-selected');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Form submission
+    uploadForm.addEventListener('submit', function(e) {
+        uploadBtn.disabled = true;
+        uploadProgress.style.display = 'block';
+        
+        // Simulate progress
+        let progress = 0;
+        const progressBar = uploadProgress.querySelector('.progress-bar');
+        const interval = setInterval(function() {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 200);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            clearInterval(interval);
+        });
+    });
+});
+</script>
+{% endblock %}

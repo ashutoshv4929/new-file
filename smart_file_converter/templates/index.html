@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Welcome Section -->
+    <div class="welcome-card mb-4">
+        <div class="card-body">
+            <h2 class="welcome-title">Welcome back!</h2>
+            <p class="welcome-subtitle">Convert your files offline with ease</p>
+            
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-number">{{ stats.today }}</div>
+                    <div class="stat-label">Today</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ stats.total }}</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ stats.saved }}</div>
+                    <div class="stat-label">Saved</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Tools -->
+    <div class="section-title">
+        <h3>PDF Tools</h3>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-4">
+            <div class="conversion-card" onclick="location.href='{{ url_for('merge_pdf_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon pdf-icon">
+                        <i data-feather="file-plus"></i>
+                    </div>
+                    <h5 class="conversion-title">Merge PDF</h5>
+                    <p class="conversion-subtitle">Combine multiple PDFs</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="conversion-card" onclick="location.href='{{ url_for('split_pdf_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon doc-icon">
+                        <i data-feather="scissors"></i>
+                    </div>
+                    <h5 class="conversion-title">Split PDF</h5>
+                    <p class="conversion-subtitle">Split PDF into pages</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="conversion-card" onclick="location.href='{{ url_for('compress_pdf_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon image-icon">
+                        <i data-feather="minimize-2"></i>
+                    </div>
+                    <h5 class="conversion-title">Compress PDF</h5>
+                    <p class="conversion-subtitle">Reduce PDF file size</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="conversion-card" onclick="location.href='{{ url_for('extract_text_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon text-icon">
+                        <i data-feather="type"></i>
+                    </div>
+                    <h5 class="conversion-title">Extract Text</h5>
+                    <p class="conversion-subtitle">OCR from PDF/Images</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="conversion-card" onclick="location.href='{{ url_for('pdf_to_images_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon image-icon">
+                        <i data-feather="image"></i>
+                    </div>
+                    <h5 class="conversion-title">PDF to Images</h5>
+                    <p class="conversion-subtitle">Convert PDF pages to images</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-4">
+            <div class="conversion-card" onclick="location.href='{{ url_for('images_to_pdf_page') }}'">
+                <div class="card-body">
+                    <div class="conversion-icon pdf-icon">
+                        <i data-feather="file-text"></i>
+                    </div>
+                    <h5 class="conversion-title">Images to PDF</h5>
+                    <p class="conversion-subtitle">Create PDF from images</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

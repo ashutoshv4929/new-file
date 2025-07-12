@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}PDF to Images - Smart File Converter{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Back to Home Button -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i data-feather="arrow-left" class="me-2"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+    
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <div class="conversion-icon image-icon mb-3">
+                    <i data-feather="image"></i>
+                </div>
+                <h2 class="mb-2">PDF to Images</h2>
+                <p class="text-muted">Convert PDF pages to PNG images</p>
+            </div>
+            
+            <div class="card upload-card">
+                <div class="card-body p-4">
+                    <form method="POST" enctype="multipart/form-data" id="convertForm">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-content">
+                                <i data-feather="image" class="upload-icon"></i>
+                                <h5>Convert PDF to Images</h5>
+                                <p>Upload a PDF to convert each page to PNG images</p>
+                                <input type="file" class="form-control" name="file" id="fileInput" accept=".pdf" required>
+                            </div>
+                        </div>
+                        
+                        <div class="file-info mt-3" id="fileInfo" style="display: none;">
+                            <div class="selected-file">
+                                <i data-feather="file-text" class="me-2"></i>
+                                <span id="fileName"></span>
+                                <small class="text-muted ms-2" id="fileSize"></small>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="convertBtn">
+                                <i data-feather="image" class="me-2"></i>
+                                Convert to Images
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="convert-progress mt-3" id="convertProgress" style="display: none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted">Converting to images...</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conversion Info -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i data-feather="info" class="me-2"></i>
+                        PDF to Images Conversion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>How it works</h6>
+                            <ol>
+                                <li>Upload your PDF file</li>
+                                <li>Each page is converted to PNG format</li>
+                                <li>High-quality image output</li>
+                                <li>Download ZIP with all images</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Features</h6>
+                            <ul class="list-unstyled">
+                                <li><i data-feather="check" class="me-2 text-success"></i>High resolution output</li>
+                                <li><i data-feather="check" class="me-2 text-success"></i>PNG format</li>
+                                <li><i data-feather="check" class="me-2 text-success"></i>Preserves quality</li>
+                                <li><i data-feather="check" class="me-2 text-success"></i>Batch download</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i data-feather="info" class="me-2"></i>
+                        Maximum file size: 16MB. Output images will be in PNG format.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const convertForm = document.getElementById('convertForm');
+    const convertBtn = document.getElementById('convertBtn');
+    const convertProgress = document.getElementById('convertProgress');
+
+    // Click to upload
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    // File selection
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    function handleFileSelect(file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        uploadArea.classList.add('file-selected');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Form submission
+    convertForm.addEventListener('submit', function(e) {
+        convertBtn.disabled = true;
+        convertProgress.style.display = 'block';
+        
+        // Simulate progress
+        let progress = 0;
+        const progressBar = convertProgress.querySelector('.progress-bar');
+        const interval = setInterval(function() {
+            progress += Math.random() * 8;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 600);
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            clearInterval(interval);
+        });
+    });
+});
+</script>
+{% endblock %}
