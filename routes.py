@@ -256,6 +256,69 @@ def compress_pdf_page():
     """Compress PDF page"""
     return render_template('pdf_tools/compress.html')
 
+@app.route('/compress-pdf', methods=['POST'])
+def compress_pdf():
+    """Handle PDF compression"""
+    from PyPDF2 import PdfReader, PdfWriter
+    import io
+    
+    if 'file' not in request.files:
+        flash('No PDF file selected', 'error')
+        return redirect(request.url)
+    
+    file = request.files['file']
+    if not file or not file.filename.lower().endswith('.pdf'):
+        flash('Please select a PDF file', 'error')
+        return redirect(request.url)
+    
+    try:
+        # Read the uploaded PDF
+        pdf_reader = PdfReader(file)
+        pdf_writer = PdfWriter()
+        
+        # Copy pages to writer with compression
+        for page in pdf_reader.pages:
+            page.compress_content_streams()  # This compresses the page
+            pdf_writer.add_page(page)
+        
+        # Save compressed PDF to memory
+        output = io.BytesIO()
+        pdf_writer.write(output)
+        output.seek(0)
+        
+        # Create a filename for the compressed PDF
+        original_name = os.path.splitext(file.filename)[0]
+        output_filename = f"{original_name}_compressed.pdf"
+        output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
+        
+        # Ensure the processed folder exists
+        os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
+        
+        # Save the compressed PDF to disk
+        with open(output_path, 'wb') as f:
+            f.write(output.getvalue())
+        
+        # Save to database
+        conversion = ConversionHistory(
+            filename=output_filename,
+            original_filename=file.filename,
+            file_type='pdf',
+            conversion_type='compress_pdf',
+            file_size=os.path.getsize(output_path),
+            status='completed',
+            processed_at=datetime.utcnow()
+        )
+        db.session.add(conversion)
+        db.session.commit()
+        
+        flash('PDF compressed successfully!', 'success')
+        return send_file(output_path, as_attachment=True, download_name=output_filename)
+        
+    except Exception as e:
+        app.logger.error(f'PDF compression error: {str(e)}')
+        flash(f'Error compressing PDF: {str(e)}', 'error')
+        return redirect(request.url)
+
 @app.route('/pdf-to-images')
 def pdf_to_images_page():
     """PDF to Images page"""
