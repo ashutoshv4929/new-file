@@ -260,10 +260,21 @@
                             </div>
                         </div>
                         
-                        <div class="d-grid gap-2 mt-3">
-                            <button type="submit" class="btn btn-primary" id="compressBtn" disabled>
-                                <i data-feather="minimize-2" class="me-2"></i>
-                                Compress PDF
+                        <div class="mb-3">
+                            <label for="compressionLevel" class="form-label">
+                                Compression Level: <span id="compressionValue">50%</span>
+                            </label>
+                            <input type="range" class="form-range" min="1" max="100" value="50" 
+                                   id="compressionLevel" name="compression_level" 
+                                   oninput="document.getElementById('compressionValue').textContent = this.value + '%'">
+                            <div class="d-flex justify-content-between">
+                                <small>Less Compression (Better Quality)</small>
+                                <small>More Compression (Smaller File)</small>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-3">
+                            <button type="submit" class="btn btn-primary" id="compressBtn">
+                                <i data-feather="minimize-2" class="me-2"></i>Compress PDF
                             </button>
                         </div>
                     </form>

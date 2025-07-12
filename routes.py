@@ -258,9 +258,12 @@ def compress_pdf_page():
 
 @app.route('/compress-pdf', methods=['POST'])
 def compress_pdf():
-    """Handle PDF compression"""
+    """Handle PDF compression with quality level"""
     from PyPDF2 import PdfReader, PdfWriter
     import io
+    from PIL import Image
+    import tempfile
+    import os
     
     if 'file' not in request.files:
         flash('No PDF file selected', 'error')
@@ -271,15 +274,63 @@ def compress_pdf():
         flash('Please select a PDF file', 'error')
         return redirect(request.url)
     
+    # Get compression level (default to 50 if not provided)
     try:
+        compression_level = int(request.form.get('compression_level', 50))
+        # Ensure compression level is between 1-100
+        compression_level = max(1, min(100, compression_level))
+    except (ValueError, TypeError):
+        compression_level = 50
+    
+    try:
+        # Calculate quality (inverse of compression level, 0-100 scale where 100 is best)
+        quality = 100 - compression_level  # Higher compression = lower quality
+        
         # Read the uploaded PDF
         pdf_reader = PdfReader(file)
         pdf_writer = PdfWriter()
         
-        # Copy pages to writer with compression
-        for page in pdf_reader.pages:
-            page.compress_content_streams()  # This compresses the page
-            pdf_writer.add_page(page)
+        # Create a temporary directory for image processing
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Process each page
+            for page_num, page in enumerate(pdf_reader.pages):
+                # Convert PDF page to image
+                images = page.to_images()
+                
+                # Save and compress each image
+                compressed_images = []
+                for img in images:
+                    # Convert to RGB if needed
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    
+                    # Save with quality setting
+                    img_path = os.path.join(temp_dir, f'page_{page_num}.jpg')
+                    # Higher quality = larger file, lower quality = smaller file
+                    img.save(img_path, 'JPEG', quality=quality, optimize=True)
+                    
+                    # Reopen the compressed image
+                    compressed_img = Image.open(img_path)
+                    compressed_images.append(compressed_img)
+                
+                # Convert back to PDF page
+                if compressed_images:
+                    # Save first image as PDF, append others if multiple
+                    compressed_images[0].save(
+                        os.path.join(temp_dir, f'page_{page_num}.pdf'),
+                        'PDF',
+                        resolution=100.0,
+                        save_all=True,
+                        append_images=compressed_images[1:] if len(compressed_images) > 1 else []
+                    )
+            
+            # Merge all processed pages
+            for page_num in range(len(pdf_reader.pages)):
+                page_path = os.path.join(temp_dir, f'page_{page_num}.pdf')
+                if os.path.exists(page_path):
+                    page_reader = PdfReader(page_path)
+                    for page in page_reader.pages:
+                        pdf_writer.add_page(page)
         
         # Save compressed PDF to memory
         output = io.BytesIO()
