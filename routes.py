@@ -256,12 +256,34 @@ def compress_pdf_page():
     """Compress PDF page"""
     return render_template('pdf_tools/compress.html')
 
+def check_ghostscript_installed():
+    """Check if Ghostscript is installed and accessible"""
+    gs_path = shutil.which('gs')
+    if not gs_path:
+        return False, "Ghostscript (gs) is not installed or not in PATH"
+    
+    try:
+        result = subprocess.run(
+            ['gs', '--version'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return True, f"Ghostscript version: {result.stdout.strip()}"
+        return False, f"Ghostscript check failed: {result.stderr or 'Unknown error'}"
+    except Exception as e:
+        return False, f"Error checking Ghostscript: {str(e)}"
+
 @app.route('/compress-pdf', methods=['POST'])
 def compress_pdf():
     """Handle PDF compression with quality level using Ghostscript"""
     import os
     import tempfile
     import subprocess
+    import shutil
+    import sys
     from io import BytesIO
     
     if 'file' not in request.files:
@@ -279,6 +301,15 @@ def compress_pdf():
         compression_level = max(1, min(100, compression_level))
     except (ValueError, TypeError):
         compression_level = 50
+    
+    # Check if Ghostscript is installed and accessible
+    gs_installed, gs_message = check_ghostscript_installed()
+    if not gs_installed:
+        app.logger.error(f"Ghostscript check failed: {gs_message}")
+        flash('PDF compression is not available: Ghostscript is not properly installed', 'error')
+        return redirect(request.url)
+    
+    app.logger.info(gs_message)  # Log the Ghostscript version
     
     try:
         # Save the uploaded file temporarily
@@ -316,25 +347,41 @@ def compress_pdf():
                 input_path
             ]
             
-            # Execute Ghostscript
+            # Log the Ghostscript command for debugging
+            app.logger.info(f"Executing Ghostscript command: {' '.join(gs_command)}")
+            
+            # Execute Ghostscript with full error capture
             try:
                 result = subprocess.run(
                     gs_command,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                    timeout=60  # 60 seconds timeout
+                    timeout=60,  # 60 seconds timeout
+                    check=True   # Raises CalledProcessError on non-zero return code
                 )
                 
-                if result.returncode != 0:
-                    error_msg = result.stderr or 'Unknown Ghostscript error'
-                    app.logger.error(f"Ghostscript error: {error_msg}")
-                    raise Exception(f"Failed to compress PDF: {error_msg}")
+                # Log the full Ghostscript output for debugging
+                app.logger.debug(f"Ghostscript stdout: {result.stdout}")
+                app.logger.debug(f"Ghostscript stderr: {result.stderr}")
+                
+                # Check if output file was created and has content
+                if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+                    error_msg = "Ghostscript did not generate any output"
+                    app.logger.error(error_msg)
+                    raise Exception(f"PDF compression failed: {error_msg}")
                 
                 # Read the compressed PDF into memory
                 with open(output_path, 'rb') as f:
                     output = BytesIO(f.read())
                     output.seek(0)
+                    
+                # Verify the output is a valid PDF
+                if output.getbuffer().nbytes < 4 or output.read(4) != b'%PDF':
+                    error_msg = "Output is not a valid PDF file"
+                    app.logger.error(error_msg)
+                    raise Exception(f"PDF compression failed: {error_msg}")
+                output.seek(0)  # Reset position after validation
                     
             except subprocess.TimeoutExpired:
                 raise Exception("PDF compression timed out (60 seconds)")
