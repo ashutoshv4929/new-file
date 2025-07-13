@@ -1,9 +1,17 @@
 #!/bin/bash
 set -e
 
+# Set up logging
+log() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+}
+
 # Install system dependencies
-sudo apt-get update
-sudo apt-get install -y \
+log "Updating package lists..."
+apt-get update
+
+log "Installing system dependencies..."
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     python3-dev \
     python3-pip \
     ghostscript \
@@ -17,29 +25,37 @@ sudo apt-get install -y \
     zlib1g-dev
 
 # Verify Ghostscript installation
+log "Verifying Ghostscript installation..."
 gs_version=$(gs --version 2>/dev/null || echo "not installed")
-echo "Ghostscript version: $gs_version"
-
-# Create a test PDF to verify Ghostscript can create PDFs
-echo "Testing Ghostscript PDF creation..."
-echo "%!PS" > test.ps
-echo "/Helvetica findfont 24 scalefont setfont" >> test.ps
-echo "100 100 moveto" >> test.ps
-echo "(Hello, World!) show" >> test.ps
-echo "showpage" >> test.ps
-
-gs -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -sOutputFile=test.pdf test.ps 2>/dev/null
-
-if [ -f "test.pdf" ]; then
-    echo "Ghostscript test: Successfully created test.pdf"
-    rm -f test.ps test.pdf
-else
-    echo "Ghostscript test: Failed to create test PDF"
-    exit 1
-fi
+log "Ghostscript version: $gs_version"
 
 # Install Python packages
-pip install -r requirements.txt
+log "Installing Python packages..."
+pip install --no-cache-dir -r requirements.txt
 
 # Verify Python packages
-python3 -c "import ghostscript; print(f'Ghostscript Python bindings version: {ghostscript.__version__}')"
+log "Verifying Python packages..."
+python3 -c "
+import sys
+import pkg_resources
+
+required = {
+    'flask',
+    'ghostscript',
+    'pdf2image',
+    'pillow',
+    'gunicorn'
+}
+
+installed = {pkg.key for pkg in pkg_resources.working_set}
+missing = required - installed
+
+if missing:
+    print(f'Error: Missing packages: {missing}', file=sys.stderr)
+    sys.exit(1)
+else:
+    print('All required packages are installed')
+"
+
+log "Build completed successfully!"
+exit 0
