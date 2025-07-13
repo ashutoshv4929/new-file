@@ -345,25 +345,11 @@ def test_ghostscript():
 
 @app.route('/compress-pdf', methods=['POST'])
 def compress_pdf():
-    """PDF compression endpoint with detailed error handling"""
-    input_path = None
-    output_path = None
-    
+    """PDF compression using PyMuPDF - Simple and Reliable"""
     try:
-        # 1. Check Ghostscript first
-        gs_installed, gs_message = check_ghostscript_installed()
-        if not gs_installed:
-            app.logger.error(f"Ghostscript check failed: {gs_message}")
-            return jsonify({
-                'error': 'PDF compression service not available',
-                'details': gs_message
-            }), 500
-            
-        app.logger.info(f"Ghostscript status: {gs_message}")
-        
-        # 2. Validate request
+        # Check if file is present
         if 'file' not in request.files:
-            return jsonify({'error': 'No file part in request'}), 400
+            return jsonify({'error': 'No file part'}), 400
             
         file = request.files['file']
         if not file or file.filename == '':
@@ -371,124 +357,82 @@ def compress_pdf():
             
         if not file.filename.lower().endswith('.pdf'):
             return jsonify({'error': 'Please upload a PDF file'}), 400
-            
-        # 3. Prepare directories
-        temp_dir = '/tmp/pdf_compress'
-        os.makedirs(temp_dir, exist_ok=True)
-        timestamp = str(int(time.time()))
-        input_path = os.path.join(temp_dir, f'input_{timestamp}.pdf')
-        output_path = os.path.join(temp_dir, f'compressed_{timestamp}.pdf')
         
-        # 4. Save uploaded file
+        # Import PyMuPDF
         try:
-            file.save(input_path)
-            if not os.path.exists(input_path):
-                return jsonify({'error': 'Failed to save uploaded file'}), 500
-        except Exception as e:
+            import fitz  # PyMuPDF
+        except ImportError:
             return jsonify({
-                'error': 'Error saving file',
+                'error': 'PDF processing library not available',
+                'details': 'Please install PyMuPDF: pip install pymupdf'
+            }), 500
+        
+        # Create a temporary file in memory
+        import io
+        import tempfile
+        
+        # Save the uploaded file to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+            file.save(temp_file.name)
+            input_path = temp_file.name
+        
+        try:
+            # Open the PDF
+            doc = fitz.open(input_path)
+            
+            # Create a new PDF with compression
+            output = io.BytesIO()
+            
+            # Save with compression settings
+            doc.save(
+                output,
+                deflate=True,  # Compress content streams
+                garbage=3,     # Garbage collect unused objects
+                clean=True,    # Clean and sanitize the PDF
+                deflate_fonts=True,  # Compress embedded fonts
+                deflate_images=True, # Compress images
+                deflate_threshold=0.5,  # Compression threshold
+            )
+            
+            # Get the compressed data
+            compressed_data = output.getvalue()
+            output_size = len(compressed_data)
+            input_size = os.path.getsize(input_path)
+            
+            # Calculate compression ratio
+            ratio = (1 - (output_size / input_size)) * 100
+            app.logger.info(f"PDF compressed: {input_size} -> {output_size} bytes ({ratio:.1f}% reduction)")
+            
+            # Send the compressed file
+            output.seek(0)
+            return send_file(
+                output,
+                as_attachment=True,
+                download_name=f'compressed_{file.filename}',
+                mimetype='application/pdf'
+            )
+            
+        except Exception as e:
+            app.logger.error(f"PDF compression error: {str(e)}", exc_info=True)
+            return jsonify({
+                'error': 'Failed to compress PDF',
                 'details': str(e)
             }), 500
             
-        # 5. Run Ghostscript with simplified command
-        gs_path = shutil.which('gs')
-        gs_cmd = [
-            gs_path,
-            '-q',  # Quiet mode
-            '-dNOPAUSE',
-            '-dBATCH',
-            '-dSAFER',
-            '-sDEVICE=pdfwrite',
-            '-dPDFSETTINGS=/screen',  # Higher compression
-            '-dCompatibilityLevel=1.4',
-            f'-sOutputFile={output_path}',
-            input_path
-        ]
-        
-        app.logger.info(f"Running command: {' '.join(gs_cmd)}")
-        
-        try:
-            result = subprocess.run(
-                gs_cmd,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            # Log Ghostscript output
-            if result.returncode != 0:
-                error_msg = f"Ghostscript failed with return code {result.returncode}"
-                if result.stderr:
-                    error_msg += f"\n{result.stderr}"
-                app.logger.error(error_msg)
-                return jsonify({
-                    'error': 'PDF compression failed',
-                    'details': error_msg
-                }), 500
-                
-        except subprocess.TimeoutExpired:
-            return jsonify({
-                'error': 'PDF compression timed out',
-                'details': 'The operation took too long to complete'
-            }), 500
-            
-        # 6. Verify output
-        if not os.path.exists(output_path):
-            return jsonify({
-                'error': 'Compression failed',
-                'details': 'No output file was created'
-            }), 500
-            
-        if os.path.getsize(output_path) == 0:
-            return jsonify({
-                'error': 'Compression failed',
-                'details': 'Empty output file was created'
-            }), 500
-            
-        # 7. Prepare response
-        original_size = os.path.getsize(input_path)
-        compressed_size = os.path.getsize(output_path)
-        ratio = (1 - (compressed_size / original_size)) * 100
-        
-        app.logger.info(f"Compression successful: {original_size} -> {compressed_size} bytes ({ratio:.1f}% reduction)")
-        
-        # 8. Send file with cleanup
-        response = send_file(
-            output_path,
-            as_attachment=True,
-            download_name=f'compressed_{file.filename}',
-            mimetype='application/pdf'
-        )
-        
-        # Cleanup after sending
-        def cleanup():
+        finally:
+            # Clean up the temporary file
             try:
                 if os.path.exists(input_path):
                     os.remove(input_path)
-                if os.path.exists(output_path):
-                    os.remove(output_path)
             except Exception as e:
-                app.logger.error(f"Cleanup error: {str(e)}")
-                
-        response.call_on_close(cleanup)
-        return response
-        
+                app.logger.error(f"Error cleaning up temp file: {str(e)}")
+    
     except Exception as e:
-        app.logger.error(f"Unexpected error in compress_pdf: {str(e)}", exc_info=True)
+        app.logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return jsonify({
-            'error': 'An unexpected error occurred',
+            'error': 'An error occurred while processing your request',
             'details': str(e)
         }), 500
-        
-    finally:
-        # Final cleanup in case of early returns
-        try:
-            if input_path and os.path.exists(input_path):
-                os.remove(input_path)
-            if output_path and os.path.exists(output_path):
-                os.remove(output_path)
-        except Exception as e:
-            app.logger.error(f"Final cleanup error: {str(e)}")
 
 @app.route('/pdf-to-images')
 def pdf_to_images_page():
