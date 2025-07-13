@@ -258,11 +258,11 @@ def compress_pdf_page():
 
 @app.route('/compress-pdf', methods=['POST'])
 def compress_pdf():
-    """Handle PDF compression with quality level using pikepdf"""
-    import io
-    import pikepdf
-    from io import BytesIO
+    """Handle PDF compression with quality level using Ghostscript"""
     import os
+    import tempfile
+    import subprocess
+    from io import BytesIO
     
     if 'file' not in request.files:
         flash('No PDF file selected', 'error')
@@ -281,35 +281,77 @@ def compress_pdf():
         compression_level = 50
     
     try:
-        # Read the uploaded PDF
-        with pikepdf.open(file) as pdf:
-            # Create a temporary file for output
-            with BytesIO() as output:
-                # Set compression settings based on compression level
-                if compression_level > 70:  # High compression
-                    # For high compression, use more aggressive settings
-                    save_args = {
-                        'compress_streams': True,
-                        'recompress_flate': True,
-                        'preserve_metadata': True,
-                        'linearize': True,
-                        'min_version': '1.5',
-                        'object_stream_mode': pikepdf.ObjectStreamMode.generate,
-                    }
-                else:
-                    # For lower compression, preserve more quality
-                    save_args = {
-                        'compress_streams': True,
-                        'recompress_flate': False,
-                        'preserve_metadata': True,
-                        'linearize': False,
-                        'min_version': '1.5',
-                        'object_stream_mode': pikepdf.ObjectStreamMode.preserve,
-                    }
+        # Save the uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_input:
+            file.save(temp_input.name)
+            input_path = temp_input.name
+        
+        # Create a temporary output file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
+            output_path = temp_output.name
+        
+        try:
+            # Map compression level to Ghostscript settings
+            # Higher compression level = more aggressive compression
+            if compression_level > 80:  # High compression (smaller file, lower quality)
+                pdf_settings = '/screen'  # 72 dpi - lowest quality, smallest size
+            elif compression_level > 50:  # Medium compression
+                pdf_settings = '/ebook'   # 150 dpi - good balance
+            else:  # Low compression (better quality, larger file)
+                pdf_settings = '/printer' # 300 dpi - high quality
+            
+            # Build Ghostscript command
+            gs_command = [
+                'gs',
+                '-sDEVICE=pdfwrite',
+                f'-dPDFSETTINGS={pdf_settings}',
+                '-dCompatibilityLevel=1.5',
+                '-dNOPAUSE',
+                '-dQUIET',
+                '-dBATCH',
+                '-dAutoRotatePages=/None',
+                '-sColorConversionStrategy=/RGB',
+                '-sProcessColorModel=DeviceRGB',
+                f'-sOutputFile={output_path}',
+                input_path
+            ]
+            
+            # Execute Ghostscript
+            try:
+                result = subprocess.run(
+                    gs_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=60  # 60 seconds timeout
+                )
                 
-                # Save the PDF with compression
-                pdf.save(output, **save_args)
-                output.seek(0)
+                if result.returncode != 0:
+                    error_msg = result.stderr or 'Unknown Ghostscript error'
+                    app.logger.error(f"Ghostscript error: {error_msg}")
+                    raise Exception(f"Failed to compress PDF: {error_msg}")
+                
+                # Read the compressed PDF into memory
+                with open(output_path, 'rb') as f:
+                    output = BytesIO(f.read())
+                    output.seek(0)
+                    
+            except subprocess.TimeoutExpired:
+                raise Exception("PDF compression timed out (60 seconds)")
+                
+        except Exception as e:
+            app.logger.error(f"Error during PDF compression: {str(e)}")
+            raise
+            
+        finally:
+            # Clean up temporary files
+            try:
+                if os.path.exists(input_path):
+                    os.unlink(input_path)
+                if os.path.exists(output_path):
+                    os.unlink(output_path)
+            except Exception as e:
+                app.logger.error(f"Error cleaning up temporary files: {str(e)}")
                 
                 # Create a unique filename
                 original_name = os.path.splitext(file.filename)[0]

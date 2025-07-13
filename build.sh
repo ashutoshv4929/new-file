@@ -1,13 +1,20 @@
 #!/bin/bash
+set -e
+
 # Install system dependencies
-apt-get update
-apt-get install -y \
-    libjpeg-dev \
-    zlib1g-dev \
-    libopenjp2-tools \
+sudo apt-get update
+sudo apt-get install -y \
+    python3-dev \
+    python3-pip \
+    ghostscript \
     poppler-utils \
+    tesseract-ocr \
+    libtesseract-dev \
+    libleptonica-dev \
     qpdf \
-    libqpdf-dev
+    libqpdf-dev \
+    libjpeg-dev \
+    zlib1g-dev
 
 # Install Python packages
 pip install -r requirements.txt
