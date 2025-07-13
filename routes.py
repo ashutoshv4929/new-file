@@ -290,9 +290,8 @@ def compress_pdf():
                     # For high compression, use more aggressive settings
                     save_args = {
                         'compress_streams': True,
-                        'recompress_fonts': True,
+                        'recompress_flate': True,
                         'compress_attachments': True,
-                        'compress_structures': True,
                         'preserve_encryption': False,
                         'preserve_metadata': True,
                         'linearize': False,
@@ -304,9 +303,8 @@ def compress_pdf():
                     # For lower compression, preserve more quality
                     save_args = {
                         'compress_streams': True,
-                        'recompress_fonts': False,
+                        'recompress_flate': False,
                         'compress_attachments': False,
-                        'compress_structures': False,
                         'preserve_encryption': False,
                         'preserve_metadata': True,
                         'linearize': False,
