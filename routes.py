@@ -345,7 +345,7 @@ def test_ghostscript():
 
 @app.route('/compress-pdf', methods=['POST'])
 def compress_pdf():
-    """Simple PDF compression using PyPDF2"""
+    """Better PDF compression using img2pdf with quality control"""
     try:
         # Check if file is present
         if 'file' not in request.files:
@@ -359,29 +359,46 @@ def compress_pdf():
             return jsonify({'error': 'Please upload a PDF file'}), 400
         
         try:
-            from PyPDF2 import PdfReader, PdfWriter
+            import os
             import io
+            import tempfile
+            import img2pdf
+            from pdf2image import convert_from_bytes
+            from PIL import Image
             
-            # Read the uploaded file
-            pdf_reader = PdfReader(file)
-            pdf_writer = PdfWriter()
+            # Save the input file to get its size
+            input_data = file.read()
+            input_size = len(input_data)
             
-            # Add all pages to the writer
-            for page in pdf_reader.pages:
-                pdf_writer.add_page(page)
+            # Convert PDF to images with 200 DPI (good balance between quality and size)
+            images = convert_from_bytes(
+                input_data,
+                dpi=200,
+                fmt='jpeg',
+                jpegopt={
+                    'quality': 70,  # Adjust quality (1-100, lower = smaller file)
+                    'progressive': True,
+                    'optimize': True
+                }
+            )
             
-            # Set compression options
-            for page in pdf_writer.pages:
-                page.compress_content_streams()  # Compress content streams
-            
-            # Create a bytes buffer for the output
+            # Convert images back to PDF with img2pdf
             output = io.BytesIO()
             
-            # Write the compressed PDF to the buffer
-            pdf_writer.write(output)
+            # Convert each image to PDF with compression
+            with tempfile.TemporaryDirectory() as temp_dir:
+                img_paths = []
+                for i, image in enumerate(images):
+                    img_path = os.path.join(temp_dir, f'page_{i}.jpg')
+                    # Save with quality setting
+                    image.save(img_path, 'JPEG', quality=70, optimize=True, progressive=True)
+                    img_paths.append(img_path)
+                
+                # Convert all images to a single PDF
+                pdf_bytes = img2pdf.convert(img_paths)
+                output.write(pdf_bytes)
             
-            # Get the sizes for logging
-            input_size = file.seek(0, 2)  # Get file size
+            # Get output size and calculate compression ratio
             output_size = output.getbuffer().nbytes
             ratio = (1 - (output_size / input_size)) * 100
             
@@ -396,10 +413,11 @@ def compress_pdf():
                 mimetype='application/pdf'
             )
             
-        except ImportError:
+        except ImportError as e:
+            app.logger.error(f"Import error: {str(e)}")
             return jsonify({
-                'error': 'PDF processing library not available',
-                'details': 'PyPDF2 is required for PDF compression'
+                'error': 'Required libraries not installed',
+                'details': 'Please install: pdf2image, pillow, img2pdf'
             }), 500
             
         except Exception as e:
