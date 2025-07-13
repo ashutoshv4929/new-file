@@ -409,26 +409,30 @@ def compress_pdf():
         
         output_path = os.path.join(processed_dir, output_filename)
         
-        # Save to disk
-        with open(output_path, 'wb') as f:
-            f.write(output.getvalue())
+        # Move the output file to processed directory
+        final_output_path = os.path.join(processed_dir, output_filename)
+        shutil.move(output_path, final_output_path)
         
         # Log the conversion
-        conversion = ConversionHistory(
-            filename=output_filename,
-            original_filename=file.filename,
-            file_type='pdf',
-            conversion_type='compress_pdf',
-            file_size=os.path.getsize(output_path),
-            status='completed',
-            processed_at=datetime.utcnow()
-        )
-        db.session.add(conversion)
-        db.session.commit()
+        try:
+            conversion = ConversionHistory(
+                filename=output_filename,
+                original_filename=file.filename,
+                file_type='pdf',
+                conversion_type='compress_pdf',
+                file_size=os.path.getsize(final_output_path),
+                status='completed',
+                processed_at=datetime.utcnow()
+            )
+            db.session.add(conversion)
+            db.session.commit()
+        except Exception as e:
+            app.logger.error(f"Error saving to database: {str(e)}")
+            db.session.rollback()
         
         # Return the compressed file
         return send_file(
-            output_path,
+            final_output_path,
             as_attachment=True,
             download_name=output_filename,
             mimetype='application/pdf'
