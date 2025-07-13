@@ -291,21 +291,16 @@ def compress_pdf():
                     save_args = {
                         'compress_streams': True,
                         'recompress_flate': True,
-                        'compress_attachments': True,
-                        'preserve_encryption': False,
                         'preserve_metadata': True,
-                        'linearize': False,
+                        'linearize': True,
                         'min_version': '1.5',
                         'object_stream_mode': pikepdf.ObjectStreamMode.generate,
-                        'stream_decode_level': pikepdf.StreamDecodeLevel.generalized,
                     }
                 else:
                     # For lower compression, preserve more quality
                     save_args = {
                         'compress_streams': True,
                         'recompress_flate': False,
-                        'compress_attachments': False,
-                        'preserve_encryption': False,
                         'preserve_metadata': True,
                         'linearize': False,
                         'min_version': '1.5',
