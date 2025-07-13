@@ -258,12 +258,14 @@ def compress_pdf_page():
 
 @app.route('/compress-pdf', methods=['POST'])
 def compress_pdf():
-    """Handle PDF compression with quality level using PyPDF2's built-in compression"""
-    from PyPDF2 import PdfReader, PdfWriter
+    """Handle PDF compression with quality level using pikepdf"""
     import io
+    import pikepdf
+    from io import BytesIO
+    import os
     
     if 'file' not in request.files:
-        flash(' No PDF file selected', 'error')
+        flash('No PDF file selected', 'error')
         return redirect(request.url)
     
     file = request.files['file']
@@ -271,78 +273,82 @@ def compress_pdf():
         flash('Please select a valid PDF file', 'error')
         return redirect(request.url)
     
-    # Get compression level (default to 50 if not provided)
+    # Get compression level (1-100)
     try:
         compression_level = int(request.form.get('compression_level', 50))
-        # Ensure compression level is between 1-100
         compression_level = max(1, min(100, compression_level))
     except (ValueError, TypeError):
         compression_level = 50
     
     try:
+        # Convert compression level to quality (1-100, where 100 is best quality)
+        quality = 101 - compression_level  # 100-1 scale
+        
         # Read the uploaded PDF
-        pdf_reader = PdfReader(file)
-        pdf_writer = PdfWriter()
-        
-        # Calculate compression ratio (0.5 to 0.9 where 0.9 is max compression)
-        compression_ratio = 0.5 + (0.4 * (compression_level / 100))
-        
-        # Process each page
-        for page in pdf_reader.pages:
-            # Add page to writer with compression
-            pdf_writer.add_page(page)
-            
-            # Apply compression to the page
-            page.compress_content_streams()  # This compresses the page content
-            
-            # Add metadata with compression info
-            if not hasattr(page, 'compress'):
-                page.compress = True
-        
-        # Set PDF version to 1.5 (supports better compression)
-        pdf_writer._header = b'%PDF-1.5\n'
-        # Set compression options
-        pdf_writer.add_metadata({
-            '/Creator': 'Smart File Converter',
-            '/Producer': 'Smart File Converter',
-            '/Compression': f'PyPDF2 (Level: {compression_level}%)',
-        })
-        
-        # Save compressed PDF to memory
-        output = io.BytesIO()
-        pdf_writer.write(output)
-        output.seek(0)
-        
-        # Create a filename for the compressed PDF
-        original_name = os.path.splitext(file.filename)[0]
-        output_filename = f"{original_name}_compressed.pdf"
-        output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
-        
-        # Ensure the processed folder exists
-        os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
-        
-        # Save the compressed PDF to disk
-        with open(output_path, 'wb') as f:
-            f.write(output.getvalue())
-        
-        # Save to database
-        conversion = ConversionHistory(
-            filename=output_filename,
-            original_filename=file.filename,
-            file_type='pdf',
-            conversion_type='compress_pdf',
-            file_size=os.path.getsize(output_path),
-            status='completed',
-            processed_at=datetime.utcnow()
-        )
-        db.session.add(conversion)
-        db.session.commit()
-        
-        flash('PDF compressed successfully!', 'success')
-        return send_file(output_path, as_attachment=True, download_name=output_filename)
-        
+        with pikepdf.open(file) as pdf:
+            # Create a temporary file for output
+            with BytesIO() as output:
+                # Save with compression
+                save_args = {
+                    'compress_streams': True,
+                    'stream_compression_level': min(9, max(1, compression_level // 10)),  # 1-9 scale
+                    'preserve_encryption': False,
+                    'preserve_metadata': True,
+                    'preserve_pages': True,
+                    'linearize': False,
+                    'min_version': '1.5',
+                    'compress_fonts': True,
+                    'compress_attachments': True,
+                    'compress_structures': True,
+                }
+                
+                # For better compression of images
+                if compression_level > 70:  # High compression
+                    save_args.update({
+                        'compress_streams': True,
+                        'stream_compression_level': 9,
+                        'compress_fonts': True,
+                        'compress_attachments': True,
+                    })
+                
+                pdf.save(output, **save_args)
+                output.seek(0)
+                
+                # Create a unique filename
+                original_name = os.path.splitext(file.filename)[0]
+                output_filename = f"{original_name}_compressed.pdf"
+                output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
+                
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                
+                # Save to disk
+                with open(output_path, 'wb') as f:
+                    f.write(output.getvalue())
+                
+                # Log the conversion
+                conversion = ConversionHistory(
+                    filename=output_filename,
+                    original_filename=file.filename,
+                    file_type='pdf',
+                    conversion_type='compress_pdf',
+                    file_size=os.path.getsize(output_path),
+                    status='completed',
+                    processed_at=datetime.utcnow()
+                )
+                db.session.add(conversion)
+                db.session.commit()
+                
+                # Return the compressed file
+                return send_file(
+                    output_path,
+                    as_attachment=True,
+                    download_name=output_filename,
+                    mimetype='application/pdf'
+                )
+                
     except Exception as e:
-        app.logger.error(f'PDF compression error: {str(e)}')
+        app.logger.error(f'Error compressing PDF: {str(e)}')
         flash(f'Error compressing PDF: {str(e)}', 'error')
         return redirect(request.url)
 
