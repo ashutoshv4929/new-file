@@ -287,130 +287,184 @@ def check_ghostscript_installed():
     except Exception as e:
         return False, f"Error checking Ghostscript: {str(e)}"
 
+@app.route('/test-ghostscript')
+def test_ghostscript():
+    """Test if Ghostscript is working"""
+    try:
+        # Check if Ghostscript is installed
+        gs_installed, gs_message = check_ghostscript_installed()
+        if not gs_installed:
+            return jsonify({'error': f'Ghostscript not found: {gs_message}'}), 500
+            
+        # Create a simple PDF using Ghostscript
+        temp_dir = '/tmp/ghostscript_test'
+        os.makedirs(temp_dir, exist_ok=True)
+        test_pdf = os.path.join(temp_dir, 'test.pdf')
+        
+        # Simple Ghostscript command to create a test PDF
+        gs_cmd = [
+            'gs',
+            '-sDEVICE=pdfwrite',
+            '-dNOPAUSE',
+            '-dBATCH',
+            f'-sOutputFile={test_pdf}',
+            '-c',
+            'newpath 100 100 moveto 200 200 lineto stroke showpage'
+        ]
+        
+        result = subprocess.run(
+            gs_cmd,
+            capture_output=True,
+            text=True
+        )
+        
+        if os.path.exists(test_pdf):
+            return jsonify({
+                'status': 'success',
+                'message': 'Ghostscript is working',
+                'file_size': os.path.getsize(test_pdf)
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'Failed to create test PDF',
+                'error': result.stderr or 'Unknown error'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
 @app.route('/compress-pdf', methods=['POST'])
 def compress_pdf():
-    """Handle PDF compression with quality level using Ghostscript"""
-    # Initialize variables
+    """PDF compression endpoint with detailed error handling"""
     input_path = None
     output_path = None
     
     try:
-        # Validate file upload
+        app.logger.info("Starting PDF compression...")
+        
+        # Check if file is present
         if 'file' not in request.files:
+            app.logger.error("No file part in request")
             return jsonify({'error': 'No file part'}), 400
         
         file = request.files['file']
-        if file.filename == '':
-            return jsonify({'error': 'No selected file'}), 400
+        if not file or file.filename == '':
+            app.logger.error("No file selected")
+            return jsonify({'error': 'No file selected'}), 400
+            
+        if not file.filename.lower().endswith('.pdf'):
+            app.logger.error("Invalid file type")
+            return jsonify({'error': 'Please upload a PDF file'}), 400
         
-        if not file or not file.filename.lower().endswith('.pdf'):
-            return jsonify({'error': 'Please upload a valid PDF file'}), 400
-        
-        # Get compression level (1-100)
-        try:
-            compression_level = int(request.form.get('compression_level', 50))
-            compression_level = max(1, min(100, compression_level))
-        except (ValueError, TypeError):
-            compression_level = 50
-    
-        # Check if Ghostscript is installed and accessible
-        gs_installed, gs_message = check_ghostscript_installed()
-        if not gs_installed:
-            return jsonify({'error': f'Ghostscript not found: {gs_message}'}), 500
-        
-        # Map compression level to Ghostscript settings
-        if compression_level > 80:  # High compression (smaller file, lower quality)
-            pdf_settings = '/screen'     # 72 dpi - lowest quality, smallest size
-        elif compression_level > 50:    # Medium compression
-            pdf_settings = '/ebook'      # 150 dpi - good balance
-        else:                          # Low compression (better quality, larger file)
-            pdf_settings = '/printer'    # 300 dpi - high quality
-        
-        app.logger.info(f"Using compression level: {compression_level}, PDF Settings: {pdf_settings}")
-        
-        # Create temp directory if it doesn't exist
-        temp_dir = os.path.join('/tmp', 'pdf_compress')
+        # Create temp directory
+        temp_dir = '/tmp/pdf_compress'
         os.makedirs(temp_dir, exist_ok=True)
         
-        # Create a unique filename
-        original_filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        output_filename = f"compressed_{timestamp}_{original_filename}"
+        # Create unique filenames
+        timestamp = str(int(time.time()))
+        input_path = os.path.join(temp_dir, f'input_{timestamp}.pdf')
+        output_path = os.path.join(temp_dir, f'compressed_{timestamp}.pdf')
         
-        # Define file paths - use absolute paths
-        input_path = os.path.join(temp_dir, f"{timestamp}_input_{original_filename}")
-        output_path = os.path.join(temp_dir, output_filename)
-        
-        # Save uploaded file
+        app.logger.info(f"Saving uploaded file to {input_path}")
         file.save(input_path)
         
-        # Build Ghostscript command with simplified options
-        gs_command = [
+        if not os.path.exists(input_path):
+            app.logger.error("Failed to save uploaded file")
+            return jsonify({'error': 'Failed to save uploaded file'}), 500
+        
+        # Check if Ghostscript is installed
+        gs_installed, gs_message = check_ghostscript_installed()
+        if not gs_installed:
+            app.logger.error(f"Ghostscript not found: {gs_message}")
+            return jsonify({'error': 'PDF compression service not available'}), 500
+        
+        # Ghostscript command
+        gs_cmd = [
             'gs',
             '-sDEVICE=pdfwrite',
-            f'-dPDFSETTINGS={pdf_settings}',
-            '-dCompatibilityLevel=1.4',  # More compatible version
+            '-dPDFSETTINGS=/ebook',  # Medium compression
             '-dNOPAUSE',
-            '-dBATCH',  # Removed -dQUIET to see more error details
-            '-dSAFER',  # For security
+            '-dBATCH',
+            '-dSAFER',
             f'-sOutputFile={output_path}',
             input_path
         ]
         
-        # Log the command
-        app.logger.info(f"Running Ghostscript command: {' '.join(gs_command)}")
+        app.logger.info(f"Running command: {' '.join(gs_cmd)}")
         
-        # Run Ghostscript with error capture
-        process = subprocess.Popen(
-            gs_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+        # Run Ghostscript
+        result = subprocess.run(
+            gs_cmd,
+            capture_output=True,
+            text=True,
+            timeout=60
         )
         
-        # Wait for process to complete with timeout
-        try:
-            stdout, stderr = process.communicate(timeout=120)  # 2 minutes timeout
-            if process.returncode != 0:
-                error_msg = f"Ghostscript failed with return code {process.returncode}"
-                if stderr:
-                    error_msg += f"\nError details: {stderr}"
-                if stdout:
-                    error_msg += f"\nOutput: {stdout}"
-                raise Exception(error_msg)
-                
-        except subprocess.TimeoutExpired:
-            process.kill()
-            raise Exception("PDF compression timed out after 2 minutes")
+        # Log Ghostscript output
+        if result.stdout:
+            app.logger.info(f"Ghostscript stdout: {result.stdout}")
+        if result.stderr:
+            app.logger.error(f"Ghostscript stderr: {result.stderr}")
         
-        # Check if output file was created and has content
+        # Check if output was created
         if not os.path.exists(output_path):
-            raise Exception("Ghostscript did not generate output file")
+            error_msg = "Ghostscript did not create output file"
+            app.logger.error(error_msg)
+            return jsonify({'error': error_msg}), 500
             
         if os.path.getsize(output_path) == 0:
-            raise Exception("Ghostscript generated an empty file")
+            error_msg = "Ghostscript created an empty file"
+            app.logger.error(error_msg)
+            return jsonify({'error': error_msg}), 500
         
-        # Log success
+        # Get file sizes
         original_size = os.path.getsize(input_path)
         compressed_size = os.path.getsize(output_path)
-        compression_ratio = (1 - (compressed_size / original_size)) * 100
         
-        app.logger.info(f"Compression successful. Original: {original_size} bytes, "
-                      f"Compressed: {compressed_size} bytes, "
-                      f"Ratio: {compression_ratio:.2f}%")
+        app.logger.info(f"Original size: {original_size} bytes, Compressed size: {compressed_size} bytes")
         
-        # Create a response with the compressed file
+        # Clean up input file
+        try:
+            if os.path.exists(input_path):
+                os.remove(input_path)
+        except Exception as e:
+            app.logger.error(f"Error removing input file: {str(e)}")
+        
+        # Send the compressed file
         response = send_file(
             output_path,
             as_attachment=True,
-            download_name=output_filename,
+            download_name=f'compressed_{file.filename}',
             mimetype='application/pdf'
         )
-                
+        
+        # Clean up output file after sending
+        try:
+            response.call_on_close(lambda: os.remove(output_path) if os.path.exists(output_path) else None)
+        except Exception as e:
+            app.logger.error(f"Error setting up cleanup for output file: {str(e)}")
+        
+        return response
+        
+    except subprocess.TimeoutExpired:
+        app.logger.error("PDF compression timed out")
+        return jsonify({'error': 'PDF compression took too long. Please try again.'}), 500
+        
     except Exception as e:
-        app.logger.error(f'Error compressing PDF: {str(e)}')
-        flash(f'Error compressing PDF: {str(e)}', 'error')
-        return redirect(request.url)
+        app.logger.error(f'Error in compress_pdf: {str(e)}', exc_info=True)
+        return jsonify({'error': 'An error occurred while processing your PDF'}), 500
+        
+    finally:
+        # Clean up any remaining files
+        try:
+            if input_path and os.path.exists(input_path):
+                os.remove(input_path)
+        except Exception as e:
+            app.logger.error(f"Error in final cleanup: {str(e)}")
 
 @app.route('/pdf-to-images')
 def pdf_to_images_page():
