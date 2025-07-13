@@ -290,58 +290,57 @@ def check_ghostscript_installed():
 @app.route('/compress-pdf', methods=['POST'])
 def compress_pdf():
     """Handle PDF compression with quality level using Ghostscript"""
-    import os
-    import tempfile
-    import subprocess
-    import shutil
-    import sys
-    from io import BytesIO
-    
-    if 'file' not in request.files:
-        flash('No PDF file selected', 'error')
-        return redirect(request.url)
-    
-    file = request.files['file']
-    if not file or not file.filename.lower().endswith('.pdf'):
-        flash('Please select a valid PDF file', 'error')
-        return redirect(request.url)
-    
-    # Get compression level (1-100)
-    try:
-        compression_level = int(request.form.get('compression_level', 50))
-        compression_level = max(1, min(100, compression_level))
-    except (ValueError, TypeError):
-        compression_level = 50
-    
-    # Check if Ghostscript is installed and accessible
-    gs_installed, gs_message = check_ghostscript_installed()
-    if not gs_installed:
-        return jsonify({'error': f'Ghostscript not found: {gs_message}'}), 500
-    
-    # Map compression level to Ghostscript settings
-    if compression_level > 80:  # High compression (smaller file, lower quality)
-        pdf_settings = '/screen'     # 72 dpi - lowest quality, smallest size
-    elif compression_level > 50:    # Medium compression
-        pdf_settings = '/ebook'      # 150 dpi - good balance
-    else:                          # Low compression (better quality, larger file)
-        pdf_settings = '/printer'    # 300 dpi - high quality
-    
-    app.logger.info(f"Using compression level: {compression_level}, PDF Settings: {pdf_settings}")
-    
-    # Create temp directory if it doesn't exist
-    temp_dir = os.path.join(app.root_path, 'temp')
-    os.makedirs(temp_dir, exist_ok=True)
-    
-    # Create a unique filename
-    original_filename = secure_filename(file.filename)
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    output_filename = f"compressed_{timestamp}_{original_filename}"
-    
-    # Define file paths - use absolute paths
-    input_path = os.path.abspath(os.path.join(temp_dir, f"{timestamp}_input_{original_filename}"))
-    output_path = os.path.abspath(os.path.join(temp_dir, output_filename))
+    # Initialize variables
+    input_path = None
+    output_path = None
     
     try:
+        # Validate file upload
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        
+        if not file or not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'Please upload a valid PDF file'}), 400
+        
+        # Get compression level (1-100)
+        try:
+            compression_level = int(request.form.get('compression_level', 50))
+            compression_level = max(1, min(100, compression_level))
+        except (ValueError, TypeError):
+            compression_level = 50
+    
+        # Check if Ghostscript is installed and accessible
+        gs_installed, gs_message = check_ghostscript_installed()
+        if not gs_installed:
+            return jsonify({'error': f'Ghostscript not found: {gs_message}'}), 500
+        
+        # Map compression level to Ghostscript settings
+        if compression_level > 80:  # High compression (smaller file, lower quality)
+            pdf_settings = '/screen'     # 72 dpi - lowest quality, smallest size
+        elif compression_level > 50:    # Medium compression
+            pdf_settings = '/ebook'      # 150 dpi - good balance
+        else:                          # Low compression (better quality, larger file)
+            pdf_settings = '/printer'    # 300 dpi - high quality
+        
+        app.logger.info(f"Using compression level: {compression_level}, PDF Settings: {pdf_settings}")
+        
+        # Create temp directory if it doesn't exist
+        temp_dir = os.path.join('/tmp', 'pdf_compress')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # Create a unique filename
+        original_filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        output_filename = f"compressed_{timestamp}_{original_filename}"
+        
+        # Define file paths - use absolute paths
+        input_path = os.path.join(temp_dir, f"{timestamp}_input_{original_filename}")
+        output_path = os.path.join(temp_dir, output_filename)
+        
         # Save uploaded file
         file.save(input_path)
         
@@ -354,7 +353,7 @@ def compress_pdf():
             '-dNOPAUSE',
             '-dBATCH',  # Removed -dQUIET to see more error details
             '-dSAFER',  # For security
-            '-sOutputFile=' + output_path,
+            f'-sOutputFile={output_path}',
             input_path
         ]
         
@@ -389,7 +388,6 @@ def compress_pdf():
             raise Exception("Ghostscript did not generate output file")
             
         if os.path.getsize(output_path) == 0:
-            os.remove(output_path)
             raise Exception("Ghostscript generated an empty file")
         
         # Log success
@@ -398,41 +396,12 @@ def compress_pdf():
         compression_ratio = (1 - (compressed_size / original_size)) * 100
         
         app.logger.info(f"Compression successful. Original: {original_size} bytes, "
-                       f"Compressed: {compressed_size} bytes, "
-                       f"Ratio: {compression_ratio:.2f}%")
+                      f"Compressed: {compressed_size} bytes, "
+                      f"Ratio: {compression_ratio:.2f}%")
         
-        # Save to processed files directory
-        processed_dir = os.path.abspath(os.path.join(app.root_path, 'static', 'processed'))
-        # Create processed directory if it doesn't exist
-        processed_dir = os.path.join(app.root_path, 'static', 'processed')
-        os.makedirs(processed_dir, exist_ok=True)
-        
-        output_path = os.path.join(processed_dir, output_filename)
-        
-        # Move the output file to processed directory
-        final_output_path = os.path.join(processed_dir, output_filename)
-        shutil.move(output_path, final_output_path)
-        
-        # Log the conversion
-        try:
-            conversion = ConversionHistory(
-                filename=output_filename,
-                original_filename=file.filename,
-                file_type='pdf',
-                conversion_type='compress_pdf',
-                file_size=os.path.getsize(final_output_path),
-                status='completed',
-                processed_at=datetime.utcnow()
-            )
-            db.session.add(conversion)
-            db.session.commit()
-        except Exception as e:
-            app.logger.error(f"Error saving to database: {str(e)}")
-            db.session.rollback()
-        
-        # Return the compressed file
-        return send_file(
-            final_output_path,
+        # Create a response with the compressed file
+        response = send_file(
+            output_path,
             as_attachment=True,
             download_name=output_filename,
             mimetype='application/pdf'
