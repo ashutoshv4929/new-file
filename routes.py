@@ -345,7 +345,7 @@ def test_ghostscript():
 
 @app.route('/compress-pdf', methods=['POST'])
 def compress_pdf():
-    """PDF compression using PyMuPDF - Simple and Reliable"""
+    """Simple PDF compression using PyPDF2"""
     try:
         # Check if file is present
         if 'file' not in request.files:
@@ -358,52 +358,36 @@ def compress_pdf():
         if not file.filename.lower().endswith('.pdf'):
             return jsonify({'error': 'Please upload a PDF file'}), 400
         
-        # Import PyMuPDF
         try:
-            import fitz  # PyMuPDF
-        except ImportError:
-            return jsonify({
-                'error': 'PDF processing library not available',
-                'details': 'Please install PyMuPDF: pip install pymupdf'
-            }), 500
-        
-        # Create a temporary file in memory
-        import io
-        import tempfile
-        
-        # Save the uploaded file to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
-            file.save(temp_file.name)
-            input_path = temp_file.name
-        
-        try:
-            # Open the PDF
-            doc = fitz.open(input_path)
+            from PyPDF2 import PdfReader, PdfWriter
+            import io
             
-            # Create a new PDF with compression
+            # Read the uploaded file
+            pdf_reader = PdfReader(file)
+            pdf_writer = PdfWriter()
+            
+            # Add all pages to the writer
+            for page in pdf_reader.pages:
+                pdf_writer.add_page(page)
+            
+            # Set compression options
+            for page in pdf_writer.pages:
+                page.compress_content_streams()  # Compress content streams
+            
+            # Create a bytes buffer for the output
             output = io.BytesIO()
             
-            # Save with compression settings
-            doc.save(
-                output,
-                deflate=True,  # Compress content streams
-                garbage=3,     # Garbage collect unused objects
-                clean=True,    # Clean and sanitize the PDF
-                deflate_fonts=True,  # Compress embedded fonts
-                deflate_images=True, # Compress images
-                deflate_threshold=0.5,  # Compression threshold
-            )
+            # Write the compressed PDF to the buffer
+            pdf_writer.write(output)
             
-            # Get the compressed data
-            compressed_data = output.getvalue()
-            output_size = len(compressed_data)
-            input_size = os.path.getsize(input_path)
-            
-            # Calculate compression ratio
+            # Get the sizes for logging
+            input_size = file.seek(0, 2)  # Get file size
+            output_size = output.getbuffer().nbytes
             ratio = (1 - (output_size / input_size)) * 100
+            
             app.logger.info(f"PDF compressed: {input_size} -> {output_size} bytes ({ratio:.1f}% reduction)")
             
-            # Send the compressed file
+            # Prepare the response
             output.seek(0)
             return send_file(
                 output,
@@ -412,20 +396,18 @@ def compress_pdf():
                 mimetype='application/pdf'
             )
             
+        except ImportError:
+            return jsonify({
+                'error': 'PDF processing library not available',
+                'details': 'PyPDF2 is required for PDF compression'
+            }), 500
+            
         except Exception as e:
             app.logger.error(f"PDF compression error: {str(e)}", exc_info=True)
             return jsonify({
                 'error': 'Failed to compress PDF',
                 'details': str(e)
             }), 500
-            
-        finally:
-            # Clean up the temporary file
-            try:
-                if os.path.exists(input_path):
-                    os.remove(input_path)
-            except Exception as e:
-                app.logger.error(f"Error cleaning up temp file: {str(e)}")
     
     except Exception as e:
         app.logger.error(f"Unexpected error: {str(e)}", exc_info=True)
