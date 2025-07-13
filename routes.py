@@ -318,6 +318,16 @@ def compress_pdf():
     if not gs_installed:
         return jsonify({'error': f'Ghostscript not found: {gs_message}'}), 500
     
+    # Map compression level to Ghostscript settings
+    if compression_level > 80:  # High compression (smaller file, lower quality)
+        pdf_settings = '/screen'     # 72 dpi - lowest quality, smallest size
+    elif compression_level > 50:    # Medium compression
+        pdf_settings = '/ebook'      # 150 dpi - good balance
+    else:                          # Low compression (better quality, larger file)
+        pdf_settings = '/printer'    # 300 dpi - high quality
+    
+    app.logger.info(f"Using compression level: {compression_level}, PDF Settings: {pdf_settings}")
+    
     # Create temp directory if it doesn't exist
     temp_dir = os.path.join(app.root_path, 'temp')
     os.makedirs(temp_dir, exist_ok=True)
