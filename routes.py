@@ -316,105 +316,83 @@ def compress_pdf():
     # Check if Ghostscript is installed and accessible
     gs_installed, gs_message = check_ghostscript_installed()
     if not gs_installed:
-        app.logger.error(f"Ghostscript check failed: {gs_message}")
-        flash('PDF compression is not available: Ghostscript is not properly installed', 'error')
-        return redirect(request.url)
+        return jsonify({'error': f'Ghostscript not found: {gs_message}'}), 500
     
-    app.logger.info(gs_message)  # Log the Ghostscript version
+    # Create temp directory if it doesn't exist
+    temp_dir = os.path.join(app.root_path, 'temp')
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    # Create a unique filename
+    original_filename = secure_filename(file.filename)
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    output_filename = f"compressed_{timestamp}_{original_filename}"
+    
+    # Define file paths - use absolute paths
+    input_path = os.path.abspath(os.path.join(temp_dir, f"{timestamp}_input_{original_filename}"))
+    output_path = os.path.abspath(os.path.join(temp_dir, output_filename))
     
     try:
-        # Save the uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_input:
-            file.save(temp_input.name)
-            input_path = temp_input.name
+        # Save uploaded file
+        file.save(input_path)
         
-        # Create a temporary output file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_output:
-            output_path = temp_output.name
+        # Build Ghostscript command with simplified options
+        gs_command = [
+            'gs',
+            '-sDEVICE=pdfwrite',
+            f'-dPDFSETTINGS={pdf_settings}',
+            '-dCompatibilityLevel=1.4',  # More compatible version
+            '-dNOPAUSE',
+            '-dBATCH',  # Removed -dQUIET to see more error details
+            '-dSAFER',  # For security
+            '-sOutputFile=' + output_path,
+            input_path
+        ]
         
+        # Log the command
+        app.logger.info(f"Running Ghostscript command: {' '.join(gs_command)}")
+        
+        # Run Ghostscript with error capture
+        process = subprocess.Popen(
+            gs_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        # Wait for process to complete with timeout
         try:
-            # Map compression level to Ghostscript settings
-            # Higher compression level = more aggressive compression
-            if compression_level > 80:  # High compression (smaller file, lower quality)
-                pdf_settings = '/screen'  # 72 dpi - lowest quality, smallest size
-            elif compression_level > 50:  # Medium compression
-                pdf_settings = '/ebook'   # 150 dpi - good balance
-            else:  # Low compression (better quality, larger file)
-                pdf_settings = '/printer' # 300 dpi - high quality
-            
-            # Build Ghostscript command
-            gs_command = [
-                'gs',
-                '-sDEVICE=pdfwrite',
-                f'-dPDFSETTINGS={pdf_settings}',
-                '-dCompatibilityLevel=1.5',
-                '-dNOPAUSE',
-                '-dQUIET',
-                '-dBATCH',
-                '-dAutoRotatePages=/None',
-                '-sColorConversionStrategy=/RGB',
-                '-sProcessColorModel=DeviceRGB',
-                f'-sOutputFile={output_path}',
-                input_path
-            ]
-            
-            # Log the Ghostscript command for debugging
-            app.logger.info(f"Executing Ghostscript command: {' '.join(gs_command)}")
-            
-            # Execute Ghostscript with full error capture
-            try:
-                result = subprocess.run(
-                    gs_command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    timeout=60,  # 60 seconds timeout
-                    check=True   # Raises CalledProcessError on non-zero return code
-                )
+            stdout, stderr = process.communicate(timeout=120)  # 2 minutes timeout
+            if process.returncode != 0:
+                error_msg = f"Ghostscript failed with return code {process.returncode}"
+                if stderr:
+                    error_msg += f"\nError details: {stderr}"
+                if stdout:
+                    error_msg += f"\nOutput: {stdout}"
+                raise Exception(error_msg)
                 
-                # Log the full Ghostscript output for debugging
-                app.logger.debug(f"Ghostscript stdout: {result.stdout}")
-                app.logger.debug(f"Ghostscript stderr: {result.stderr}")
-                
-                # Check if output file was created and has content
-                if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
-                    error_msg = "Ghostscript did not generate any output"
-                    app.logger.error(error_msg)
-                    raise Exception(f"PDF compression failed: {error_msg}")
-                
-                # Read the compressed PDF into memory
-                with open(output_path, 'rb') as f:
-                    output = BytesIO(f.read())
-                    output.seek(0)
-                    
-                # Verify the output is a valid PDF
-                if output.getbuffer().nbytes < 4 or output.read(4) != b'%PDF':
-                    error_msg = "Output is not a valid PDF file"
-                    app.logger.error(error_msg)
-                    raise Exception(f"PDF compression failed: {error_msg}")
-                output.seek(0)  # Reset position after validation
-                    
-            except subprocess.TimeoutExpired:
-                raise Exception("PDF compression timed out (60 seconds)")
-                
-        except Exception as e:
-            app.logger.error(f"Error during PDF compression: {str(e)}")
-            raise
-            
-        finally:
-            # Clean up temporary files
-            try:
-                if os.path.exists(input_path):
-                    os.unlink(input_path)
-                if os.path.exists(output_path):
-                    os.unlink(output_path)
-            except Exception as e:
-                app.logger.error(f"Error cleaning up temporary files: {str(e)}")
+        except subprocess.TimeoutExpired:
+            process.kill()
+            raise Exception("PDF compression timed out after 2 minutes")
         
-        # Create a unique filename
-        original_name = os.path.splitext(file.filename)[0]
-        output_filename = f"{original_name}_compressed.pdf"
+        # Check if output file was created and has content
+        if not os.path.exists(output_path):
+            raise Exception("Ghostscript did not generate output file")
+            
+        if os.path.getsize(output_path) == 0:
+            os.remove(output_path)
+            raise Exception("Ghostscript generated an empty file")
         
+        # Log success
+        original_size = os.path.getsize(input_path)
+        compressed_size = os.path.getsize(output_path)
+        compression_ratio = (1 - (compressed_size / original_size)) * 100
+        
+        app.logger.info(f"Compression successful. Original: {original_size} bytes, "
+                       f"Compressed: {compressed_size} bytes, "
+                       f"Ratio: {compression_ratio:.2f}%")
+        
+        # Save to processed files directory
+        processed_dir = os.path.abspath(os.path.join(app.root_path, 'static', 'processed'))
         # Create processed directory if it doesn't exist
         processed_dir = os.path.join(app.root_path, 'static', 'processed')
         os.makedirs(processed_dir, exist_ok=True)
