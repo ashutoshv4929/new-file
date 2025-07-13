@@ -1,13 +1,24 @@
 import os
 import uuid
 import subprocess
+import shutil
 from datetime import datetime
 from flask import render_template, request, redirect, url_for, flash, jsonify, send_file
 from werkzeug.utils import secure_filename
-from app import app, db
+from app import app
 from models import ConversionHistory, ExtractedText, AppSettings
-from services.ocr_service import OCRService
-from services.cloud_storage import CloudStorageService
+from extensions import db
+
+# Import services
+try:
+    from services.ocr_service import OCRService
+except ImportError:
+    OCRService = None
+
+try:
+    from services.cloud_storage import CloudStorageService
+except ImportError:
+    CloudStorageService = None
 from sqlalchemy import func
 
 # Initialize services
@@ -399,39 +410,41 @@ def compress_pdf():
                     os.unlink(output_path)
             except Exception as e:
                 app.logger.error(f"Error cleaning up temporary files: {str(e)}")
-                
-                # Create a unique filename
-                original_name = os.path.splitext(file.filename)[0]
-                output_filename = f"{original_name}_compressed.pdf"
-                output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
-                
-                # Ensure directory exists
-                os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                
-                # Save to disk
-                with open(output_path, 'wb') as f:
-                    f.write(output.getvalue())
-                
-                # Log the conversion
-                conversion = ConversionHistory(
-                    filename=output_filename,
-                    original_filename=file.filename,
-                    file_type='pdf',
-                    conversion_type='compress_pdf',
-                    file_size=os.path.getsize(output_path),
-                    status='completed',
-                    processed_at=datetime.utcnow()
-                )
-                db.session.add(conversion)
-                db.session.commit()
-                
-                # Return the compressed file
-                return send_file(
-                    output_path,
-                    as_attachment=True,
-                    download_name=output_filename,
-                    mimetype='application/pdf'
-                )
+        
+        # Create a unique filename
+        original_name = os.path.splitext(file.filename)[0]
+        output_filename = f"{original_name}_compressed.pdf"
+        
+        # Create processed directory if it doesn't exist
+        processed_dir = os.path.join(app.root_path, 'static', 'processed')
+        os.makedirs(processed_dir, exist_ok=True)
+        
+        output_path = os.path.join(processed_dir, output_filename)
+        
+        # Save to disk
+        with open(output_path, 'wb') as f:
+            f.write(output.getvalue())
+        
+        # Log the conversion
+        conversion = ConversionHistory(
+            filename=output_filename,
+            original_filename=file.filename,
+            file_type='pdf',
+            conversion_type='compress_pdf',
+            file_size=os.path.getsize(output_path),
+            status='completed',
+            processed_at=datetime.utcnow()
+        )
+        db.session.add(conversion)
+        db.session.commit()
+        
+        # Return the compressed file
+        return send_file(
+            output_path,
+            as_attachment=True,
+            download_name=output_filename,
+            mimetype='application/pdf'
+        )
                 
     except Exception as e:
         app.logger.error(f'Error compressing PDF: {str(e)}')

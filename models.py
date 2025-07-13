@@ -1,5 +1,5 @@
-from app import db
 from datetime import datetime
+from extensions import db
 from sqlalchemy import func
 
 class ConversionHistory(db.Model):

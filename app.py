@@ -1,17 +1,11 @@
 import os
 import logging
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
+from extensions import db, Base
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
-
-class Base(DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
 
 # Create the app
 app = Flask(__name__)
@@ -37,10 +31,35 @@ app.config['GOOGLE_CLOUD_STORAGE_BUCKET'] = os.environ.get("GOOGLE_CLOUD_STORAGE
 # Initialize the app with the extension
 db.init_app(app)
 
-with app.app_context():
-    # Import models to ensure tables are created
-    import models
-    db.create_all()
+# Import models after db initialization
+from models import ConversionHistory, ExtractedText, AppSettings
 
-# Import routes
+# Create tables if they don't exist
+with app.app_context():
+    # Check if tables exist before creating them
+    inspector = db.inspect(db.engine)
+    existing_tables = inspector.get_table_names()
+    
+    # Get all table names from models
+    table_names = [table.__tablename__ for table in [ConversionHistory, ExtractedText, AppSettings] 
+                  if hasattr(table, '__tablename__')]
+    
+    # Create only missing tables
+    missing_tables = [table for table in table_names if table not in existing_tables]
+    
+    if missing_tables:
+        print(f"Creating missing tables: {', '.join(missing_tables)}")
+        db.create_all()
+    else:
+        print("All tables already exist")
+
+# Import routes after db initialization
 import routes
+
+if __name__ == '__main__':
+    # Create necessary directories if they don't exist
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
+    
+    # Run the app in debug mode
+    app.run(host='0.0.0.0', port=5000, debug=True)
