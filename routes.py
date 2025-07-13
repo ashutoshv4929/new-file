@@ -281,36 +281,40 @@ def compress_pdf():
         compression_level = 50
     
     try:
-        # Convert compression level to quality (1-100, where 100 is best quality)
-        quality = 101 - compression_level  # 100-1 scale
-        
         # Read the uploaded PDF
         with pikepdf.open(file) as pdf:
             # Create a temporary file for output
             with BytesIO() as output:
-                # Save with compression
-                save_args = {
-                    'compress_streams': True,
-                    'stream_compression_level': min(9, max(1, compression_level // 10)),  # 1-9 scale
-                    'preserve_encryption': False,
-                    'preserve_metadata': True,
-                    'preserve_pages': True,
-                    'linearize': False,
-                    'min_version': '1.5',
-                    'compress_fonts': True,
-                    'compress_attachments': True,
-                    'compress_structures': True,
-                }
-                
-                # For better compression of images
+                # Set compression settings based on compression level
                 if compression_level > 70:  # High compression
-                    save_args.update({
+                    # For high compression, use more aggressive settings
+                    save_args = {
                         'compress_streams': True,
-                        'stream_compression_level': 9,
                         'compress_fonts': True,
                         'compress_attachments': True,
-                    })
+                        'compress_structures': True,
+                        'preserve_encryption': False,
+                        'preserve_metadata': True,
+                        'linearize': False,
+                        'min_version': '1.5',
+                        'object_stream_mode': pikepdf.ObjectStreamMode.generate,
+                        'stream_decode_level': pikepdf.StreamDecodeLevel.generalized,
+                    }
+                else:
+                    # For lower compression, preserve more quality
+                    save_args = {
+                        'compress_streams': True,
+                        'compress_fonts': True,
+                        'compress_attachments': False,
+                        'compress_structures': False,
+                        'preserve_encryption': False,
+                        'preserve_metadata': True,
+                        'linearize': False,
+                        'min_version': '1.5',
+                        'object_stream_mode': pikepdf.ObjectStreamMode.preserve,
+                    }
                 
+                # Save the PDF with compression
                 pdf.save(output, **save_args)
                 output.seek(0)
                 
